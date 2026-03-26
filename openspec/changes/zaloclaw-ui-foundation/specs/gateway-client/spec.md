@@ -20,25 +20,31 @@ AND the error message is accessible via `GatewayContext.error`
 
 ### Requirement: Implement challenge/auth handshake
 
-Upon WebSocket open, the server emits a `connect.challenge` event with a `nonce` field. The client must respond with `connect.params` containing `auth.token`.
+Upon WebSocket open, the server emits a `connect.challenge` event with a `nonce` field. The client must respond with a signed connect request that includes auth context.
 
 #### Scenario: Localhost auto-approval
 
 WHEN connecting from `localhost`
 THEN server emits `connect.challenge` with a nonce
-AND client replies with `connect.params { auth: { token: "" } }` (empty token for auto-approval)
+AND client replies with a signed connect request that includes `auth.token`
 AND server emits `hello` completing the handshake
 AND `GatewayContext.status` transitions to `"connected"`
 
 #### Scenario: Stored token reused across page reloads
 
-WHEN `sessionStorage` contains key `zaloclaw.gateway.token`
-THEN the client reads that value and sends it in `connect.params.auth.token`
+WHEN `localStorage` contains key `zaloclaw.gateway.token`
+THEN the client reads that value and sends it in handshake auth token
 
 #### Scenario: Token received in `hello` is persisted
 
 WHEN the server includes a `token` field in the `hello` event
-THEN the client writes it to `sessionStorage` key `zaloclaw.gateway.token`
+THEN the client writes it to `localStorage` key `zaloclaw.gateway.token`
+
+#### Scenario: Device credentials persist for next launch
+
+WHEN the client auto-generates or receives `deviceId`, `publicKey`, and `privateKey`
+THEN the client stores them in `localStorage`
+AND subsequent launches load and reuse these values for handshake
 
 ---
 

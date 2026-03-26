@@ -1,0 +1,107 @@
+"use client";
+
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+
+import { GatewayClient } from "@/lib/gateway/client";
+import type { ConnectionStatus, JsonValue } from "@/lib/gateway/types";
+
+interface GatewayContextValue {
+  status: ConnectionStatus;
+  error: string | null;
+  send: <TResponse extends JsonValue = JsonValue>(
+    method: string,
+    params?: JsonValue
+  ) => Promise<TResponse>;
+  subscribe: (
+    event: string,
+    handler: (payload: JsonValue | undefined) => void
+  ) => () => void;
+}
+
+const GatewayContext = createContext<GatewayContextValue | null>(null);
+
+export function GatewayProvider({ children }: { children: ReactNode }) {
+  const clientRef = useRef<GatewayClient | null>(null);
+  const [status, setStatus] = useState<ConnectionStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+
+  if (!clientRef.current) {
+    clientRef.current = new GatewayClient();
+  }
+
+  useEffect(() => {
+    const client = clientRef.current;
+    if (!client) {
+      return;
+    }
+
+    const unsubscribe = client.onStatusChange((nextStatus, nextError) => {
+      setStatus(nextStatus);
+      setError(nextError);
+    });
+
+    client.connect();
+
+    return () => {
+      unsubscribe();
+      client.disconnect();
+    };
+  }, []);
+
+  const send = useCallback(
+    <TResponse extends JsonValue = JsonValue>(
+      method: string,
+      params: JsonValue = {}
+    ) => {
+      if (!clientRef.current) {
+        return Promise.reject(new Error("Gateway client is unavailable"));
+      }
+
+      return clientRef.current.send<TResponse>(method, params);
+    },
+    []
+  );
+
+  const subscribe = useCallback(
+    (event: string, handler: (payload: JsonValue | undefined) => void) => {
+      if (!clientRef.current) {
+        return () => {};
+      }
+
+      return clientRef.current.subscribe(event, handler);
+    },
+    []
+  );
+
+  const value = useMemo(
+    () => ({
+      status,
+      error,
+      send,
+      subscribe,
+    }),
+    [status, error, send, subscribe]
+  );
+
+  return (
+    <GatewayContext.Provider value={value}>{children}</GatewayContext.Provider>
+  );
+}
+
+export function useGateway(): GatewayContextValue {
+  const context = useContext(GatewayContext);
+  if (!context) {
+    throw new Error("useGateway must be used within GatewayProvider");
+  }
+
+  return context;
+}

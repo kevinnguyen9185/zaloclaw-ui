@@ -75,11 +75,11 @@ GatewayProvider
 
 ---
 
-### D5: Auth token stored in sessionStorage
+### D5: Gateway credentials stored in localStorage
 
-**Decision**: Gateway auth token stored in `sessionStorage` only (scoped to tab, cleared on close).
+**Decision**: Gateway token and device credentials (`deviceId`, `publicKey`, `privateKey`, optional `deviceToken`) are stored in `localStorage` and reused across sessions.
 
-**Rationale**: Localhost-only tool, auto-approved on connect. Storing tokens in `localStorage` would persist them across browser profiles unnecessarily. Matches the behavior of the original Control UI for token handling.
+**Rationale**: Reduces onboarding friction by preserving approved device identity between browser restarts, preventing repeated manual setup and pairing prompts.
 
 ---
 

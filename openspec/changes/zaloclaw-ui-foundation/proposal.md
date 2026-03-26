@@ -27,4 +27,4 @@ There is no user-facing UI purpose-built for the Zalo AI assistant use case. The
 - Runtime dependency on OpenClaw gateway at `http://localhost:18789` (configurable)
 - Browser connects directly via WebSocket — no Next.js server-side proxy required for core features
 - Node.js BFF route handlers used only for `/api/health` polling (unauthenticated ping to OpenClaw `/health`)
-- Token/auth stored in `sessionStorage` (tab-scoped), never persisted to `localStorage` or server
+- Token and device credentials stored in `localStorage` for cross-session reuse; not persisted to server

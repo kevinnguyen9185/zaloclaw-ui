@@ -75,9 +75,18 @@ WHEN the user enters step 3
 THEN the wizard calls `send("channels.status", {})` to fetch current Zalo channel state
 AND displays current pairing status (connected / not paired)
 
+#### Note: `channels.status` response shape
+
+The response payload has the following relevant structure:
+- `payload.channels` — object keyed by channel id (e.g. `{ zalo: { running: boolean, ... } }`)
+- `payload.channelAccounts` — object keyed by channel id with arrays of account objects
+
+Zalo is considered connected when `payload.channels.zalo.running === true`.
+The response does NOT contain a top-level `connected` boolean, and `channels` is NOT an array.
+
 #### Scenario: Already paired
 
-WHEN `channels.status` response indicates Zalo is already connected
+WHEN `channels.status` returns `payload.channels.zalo.running === true`
 THEN step 3 shows a "Zalo connected" confirmation badge
 AND the "Next" button is enabled immediately
 
