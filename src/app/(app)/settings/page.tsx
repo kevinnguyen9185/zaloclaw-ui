@@ -1,4 +1,5 @@
 import { ConfigSummaryCard } from "@/components/settings/ConfigSummaryCard";
+import { ThemeSettingsPanel } from "@/components/settings/ThemeSettingsPanel";
 
 export default function SettingsPage() {
   return (
@@ -7,6 +8,7 @@ export default function SettingsPage() {
       <p className="text-sm text-muted-foreground">
         Settings now read structured gateway config through a shared service.
       </p>
+      <ThemeSettingsPanel />
       <ConfigSummaryCard />
     </section>
   );

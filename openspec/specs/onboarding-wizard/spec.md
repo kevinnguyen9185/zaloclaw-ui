@@ -1,27 +1,27 @@
 ## ADDED Requirements
 
-### Requirement: Model step includes OpenRouter key path before model selection
-The onboarding wizard SHALL allow OpenRouter key setup within step 2 and keep model selection available in the same step.
+### Requirement: Onboarding model step SHALL use structured config service APIs
+The onboarding model step SHALL read and update OpenClaw configuration exclusively through the shared structured configuration service.
 
-#### Scenario: User proceeds after configuring key
-- **WHEN** user saves an OpenRouter key in step 2 and models are available
-- **THEN** user can select a model and click next in the same step
-- **AND** wizard advances to step 3 without requiring a page reload
+#### Scenario: Model step load uses normalized state
+- **WHEN** the onboarding model step initializes
+- **THEN** it requests configuration via the structured configuration service
+- **AND** it reads model/provider values from normalized typed state
 
-#### Scenario: User skips key setup when models already available
-- **WHEN** models are already available at step 2
-- **THEN** user can continue with normal model selection
-- **AND** OpenRouter key setup remains optional
+#### Scenario: Model step save uses targeted patch
+- **WHEN** the user confirms model/provider updates in onboarding
+- **THEN** the step submits a targeted config patch through the configuration service
+- **AND** no direct raw object mutation is performed in UI component code
 
-### Requirement: Sensitive key value is not exposed in onboarding UI feedback
-The onboarding wizard SHALL avoid exposing full OpenRouter key content in visible success/error messages.
+### Requirement: Onboarding SHALL surface configuration errors with actionable context
+The onboarding model step SHALL map configuration load/save failures into actionable user-visible feedback.
 
-#### Scenario: Save success message redacts key
-- **WHEN** key save succeeds
-- **THEN** success feedback contains no full API key value
-- **AND** key is not rendered in plain text confirmation
+#### Scenario: Load failure on model step
+- **WHEN** config loading fails during model step initialization
+- **THEN** the user sees a retry-capable error state
+- **AND** the step does not proceed with undefined configuration data
 
-#### Scenario: Save error message redacts key
-- **WHEN** key save fails
-- **THEN** error feedback contains no full API key value
-- **AND** user can correct and retry input
+#### Scenario: Save failure on model update
+- **WHEN** config save fails after user submission
+- **THEN** the step remains on the current screen with clear failure feedback
+- **AND** previous valid selections remain available for correction and retry
