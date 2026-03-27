@@ -11,10 +11,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { StepProgress } from "@/components/onboarding/StepProgress";
+import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
 
 export function OnboardingShell({ children }: { children: ReactNode }) {
   const { state } = useOnboarding();
+  const { t } = useLocalization();
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0e1a] px-4 py-12">
@@ -32,9 +34,9 @@ export function OnboardingShell({ children }: { children: ReactNode }) {
 
       <Card className="relative z-10 w-full max-w-2xl animate-hero-enter shadow-2xl">
         <CardHeader className="pb-4">
-          <CardTitle className="text-xl">ZaloClaw Setup</CardTitle>
+          <CardTitle className="text-xl">{t("onboarding.shell.title")}</CardTitle>
           <CardDescription>
-            Complete the steps below to connect your assistant.
+            {t("onboarding.shell.subtitle")}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">

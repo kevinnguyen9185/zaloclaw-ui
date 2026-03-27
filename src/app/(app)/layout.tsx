@@ -8,17 +8,24 @@ import { MoonIcon, SunIcon } from "lucide-react";
 
 import { GatewayStatusBadge } from "@/components/dashboard/GatewayStatusBadge";
 import { Button } from "@/components/ui/button";
+import { useLocalization } from "@/lib/i18n/context";
 import { loadOnboardingState } from "@/lib/onboarding/storage";
 import { useTheme } from "@/lib/theme/context";
 
 const NAV_ITEMS = [
-  { href: "/dashboard", label: "Dashboard" },
-  { href: "/settings", label: "Settings" },
+  { href: "/dashboard", labelKey: "dashboard.nav.dashboard" },
+  { href: "/settings", labelKey: "dashboard.nav.settings" },
 ];
 
-const PAGE_TITLES: Record<string, { title: string; sub: string }> = {
-  "/dashboard": { title: "Dashboard", sub: "System overview and model status" },
-  "/settings": { title: "Settings", sub: "Configure model, theme, and gateway" },
+const PAGE_TITLES: Record<string, { titleKey: string; subKey: string }> = {
+  "/dashboard": {
+    titleKey: "dashboard.page.dashboard.title",
+    subKey: "dashboard.page.dashboard.sub",
+  },
+  "/settings": {
+    titleKey: "dashboard.page.settings.title",
+    subKey: "dashboard.page.settings.sub",
+  },
 };
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -26,6 +33,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const { resolvedMode, toggleMode } = useTheme();
+  const { t } = useLocalization();
 
   useEffect(() => {
     const state = loadOnboardingState();
@@ -37,10 +45,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   }, [router]);
 
   if (!ready) {
-    return <div className="p-6 text-sm text-muted-foreground">Loading...</div>;
+    return <div className="p-6 text-sm text-muted-foreground">{t("common.loading")}</div>;
   }
 
-  const page = PAGE_TITLES[pathname] ?? { title: "ZaloClaw", sub: "" };
+  const page = PAGE_TITLES[pathname] ?? {
+    titleKey: "dashboard.page.dashboard.title",
+    subKey: "",
+  };
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -62,7 +73,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
         {/* Nav */}
         <nav className="flex flex-col gap-1 px-3 py-4">
-          {NAV_ITEMS.map(({ href, label }) => {
+          {NAV_ITEMS.map(({ href, labelKey }) => {
             const isActive = pathname === href;
             return (
               <Link
@@ -74,7 +85,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     : "flex items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 }
               >
-                {label}
+                {t(labelKey)}
               </Link>
             );
           })}
@@ -85,9 +96,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <main className="flex flex-1 flex-col">
         <header className="flex items-center justify-between border-b border-border bg-card px-6 py-3">
           <div>
-            <h2 className="text-sm font-semibold">{page.title}</h2>
-            {page.sub && (
-              <p className="text-xs text-muted-foreground">{page.sub}</p>
+            <h2 className="text-sm font-semibold">{t(page.titleKey)}</h2>
+            {page.subKey && (
+              <p className="text-xs text-muted-foreground">{t(page.subKey)}</p>
             )}
           </div>
           <div className="flex items-center gap-2">
@@ -95,7 +106,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               type="button"
               size="icon-sm"
               variant="outline"
-              aria-label="Toggle theme mode"
+              aria-label={t("settings.theme.mode")}
               onClick={toggleMode}
             >
               {resolvedMode === "dark" ? (

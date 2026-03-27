@@ -5,36 +5,37 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
 
 export default function OnboardingCompletePage() {
   const router = useRouter();
   const { state, setCompleted } = useOnboarding();
+  const { t } = useLocalization();
 
   return (
     <section className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
-          Step 4 · Launch Ready
+          {t("onboarding.complete.eyebrow")}
         </p>
         <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
-          You&apos;re ready to enter your dashboard
+          {t("onboarding.complete.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Quick review before handoff: your model and Zalo connection status are
-          shown below.
+          {t("onboarding.complete.subtitle")}
         </p>
       </header>
 
       <div className="space-y-3 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">Selected Model</span>
-          <Badge variant="secondary">{state.model ?? "Not selected"}</Badge>
+          <span className="text-sm text-muted-foreground">{t("onboarding.complete.selectedModel")}</span>
+          <Badge variant="secondary">{state.model ?? t("onboarding.complete.notSelected")}</Badge>
         </div>
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">Zalo</span>
+          <span className="text-sm text-muted-foreground">{t("onboarding.complete.zalo")}</span>
           <Badge variant={state.zalo === "connected" ? "default" : "outline"}>
-            {state.zalo === "connected" ? "Connected" : "Skipped"}
+            {state.zalo === "connected" ? t("common.connected") : t("onboarding.complete.skipped")}
           </Badge>
         </div>
       </div>
@@ -49,7 +50,7 @@ export default function OnboardingCompletePage() {
             router.push("/dashboard");
           }}
         >
-          Go to Dashboard
+          {t("onboarding.complete.goDashboard")}
         </Button>
       </div>
     </section>

@@ -1,4 +1,5 @@
 import { ActiveModelCard } from "@/components/dashboard/ActiveModelCard";
+import { UseCaseLaunchpad } from "@/components/dashboard/UseCaseLaunchpad";
 import { ZaloStatusCard } from "@/components/dashboard/ZaloStatusCard";
 
 export default function DashboardPage() {
@@ -8,6 +9,7 @@ export default function DashboardPage() {
         <ActiveModelCard />
         <ZaloStatusCard />
       </div>
+      <UseCaseLaunchpad />
     </section>
   );
 }

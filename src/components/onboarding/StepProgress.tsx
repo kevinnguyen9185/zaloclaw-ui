@@ -1,12 +1,13 @@
 "use client";
 
+import { useLocalization } from "@/lib/i18n/context";
 import type { OnboardingStep } from "@/lib/onboarding/types";
 
-const STEPS: Array<{ key: OnboardingStep; label: string }> = [
-  { key: "check", label: "Gateway" },
-  { key: "model", label: "Model" },
-  { key: "zalo", label: "Zalo" },
-  { key: "complete", label: "Done" },
+const STEPS: Array<{ key: OnboardingStep; labelKey: string }> = [
+  { key: "check", labelKey: "onboarding.steps.check" },
+  { key: "model", labelKey: "onboarding.steps.model" },
+  { key: "zalo", labelKey: "onboarding.steps.zalo" },
+  { key: "complete", labelKey: "onboarding.steps.complete" },
 ];
 
 function getStepIndex(step: OnboardingStep): number {
@@ -16,6 +17,7 @@ function getStepIndex(step: OnboardingStep): number {
 
 export function StepProgress({ step }: { step: OnboardingStep }) {
   const index = getStepIndex(step);
+  const { t } = useLocalization();
 
   return (
     <ol className="flex items-center gap-0">
@@ -46,7 +48,7 @@ export function StepProgress({ step }: { step: OnboardingStep }) {
                   isActive ? "font-medium text-foreground" : "text-muted-foreground",
                 ].join(" ")}
               >
-                {item.label}
+                {t(item.labelKey)}
               </span>
             </div>
             {!isLast && (

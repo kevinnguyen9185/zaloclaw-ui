@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { createGatewayConfigService } from "@/lib/gateway/config";
 import { useGateway } from "@/lib/gateway/context";
+import { useLocalization } from "@/lib/i18n/context";
 
 type ModelInfo = {
   name: string;
@@ -36,6 +37,7 @@ function extractModel(reference: string | null): ModelInfo | null {
 
 export function ActiveModelCard() {
   const { status, send } = useGateway();
+  const { t } = useLocalization();
   const [model, setModel] = useState<ModelInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +64,7 @@ export function ActiveModelCard() {
         }
 
         const message =
-          caught instanceof Error ? caught.message : "Failed to read active model";
+          caught instanceof Error ? caught.message : t("dashboard.activeModel.error");
         setError(message);
       }
     };
@@ -72,13 +74,13 @@ export function ActiveModelCard() {
     return () => {
       cancelled = true;
     };
-  }, [send, status]);
+  }, [send, status, t]);
 
   return (
     <Card className="animate-card-enter-1">
       <CardHeader className="pb-2">
         <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Active Model
+          {t("dashboard.activeModel.label")}
         </CardDescription>
         <CardTitle className="text-xl">
           {error ? (
@@ -86,7 +88,7 @@ export function ActiveModelCard() {
           ) : model ? (
             model.name
           ) : (
-            <span className="text-muted-foreground text-base font-normal">No model configured</span>
+            <span className="text-muted-foreground text-base font-normal">{t("dashboard.activeModel.empty")}</span>
           )}
         </CardTitle>
       </CardHeader>

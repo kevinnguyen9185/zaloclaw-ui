@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useGateway } from "@/lib/gateway/context";
+import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
 
 function isZaloConnected(payload: unknown): boolean {
@@ -42,6 +43,7 @@ export default function OnboardingZaloPage() {
   const router = useRouter();
   const { status, send } = useGateway();
   const { setZalo, setStep } = useOnboarding();
+  const { t } = useLocalization();
 
   const [checking, setChecking] = useState(false);
   const [connected, setConnected] = useState(false);
@@ -87,26 +89,25 @@ export default function OnboardingZaloPage() {
     <section className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
-          Step 3 · Zalo Connection
+          {t("onboarding.zalo.eyebrow")}
         </p>
         <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
-          Pair your Zalo channel when you&apos;re ready
+          {t("onboarding.zalo.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Connect now for immediate message delivery, or skip this step and finish
-          setup first.
+          {t("onboarding.zalo.subtitle")}
         </p>
       </header>
 
       <div className="space-y-2 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">Zalo Status</span>
+          <span className="text-sm text-muted-foreground">{t("onboarding.zalo.status")}</span>
           <Badge variant={connected ? "default" : "outline"}>
-            {connected ? "Connected" : "Not Paired"}
+            {connected ? t("common.connected") : t("onboarding.zalo.notPaired")}
           </Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {checking ? "Checking status..." : "Status refreshes every 3 seconds."}
+          {checking ? t("onboarding.zalo.checking") : t("onboarding.zalo.autoRefresh")}
         </p>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>
@@ -115,7 +116,7 @@ export default function OnboardingZaloPage() {
 
       <div className="flex flex-wrap gap-3">
         <Button type="button" variant="outline" onClick={() => void checkStatus()}>
-          Refresh
+          {t("common.refresh")}
         </Button>
 
         <Button
@@ -127,7 +128,7 @@ export default function OnboardingZaloPage() {
             router.push("/complete");
           }}
         >
-          Skip for now
+          {t("onboarding.zalo.skip")}
         </Button>
 
         <Button
@@ -139,7 +140,7 @@ export default function OnboardingZaloPage() {
             router.push("/complete");
           }}
         >
-          Next
+          {t("common.next")}
         </Button>
       </div>
     </section>

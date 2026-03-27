@@ -1,0 +1,15 @@
+{
+  "languageLabel": "Language",
+  "languageVietnamese": "Vietnamese",
+  "languageEnglish": "English",
+  "loading": "Loading...",
+  "retry": "Retry",
+  "next": "Next",
+  "save": "Save",
+  "refresh": "Refresh",
+  "connected": "Connected",
+  "notConnected": "Not connected",
+  "gateway": "Gateway",
+  "connecting": "Connecting",
+  "disconnected": "Disconnected"
+}

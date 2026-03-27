@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { useGateway } from "@/lib/gateway/context";
+import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
 import {
   OPENROUTER_KEY_SAVED_MESSAGE,
@@ -32,6 +33,7 @@ export default function OnboardingModelPage() {
   const router = useRouter();
   const { status, send } = useGateway();
   const { state, setModel, setStep } = useOnboarding();
+  const { t } = useLocalization();
 
   const [models, setModels] = useState<ModelOption[]>([]);
   const [selectedModel, setSelectedModel] = useState<string>(state.model ?? "");
@@ -142,24 +144,22 @@ export default function OnboardingModelPage() {
     <section className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
-          Step 2 · Model Intelligence
+          {t("onboarding.model.eyebrow")}
         </p>
         <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
-          Choose the brain for your assistant
+          {t("onboarding.model.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          Pick the model experience you want. You can add your OpenRouter key here
-          and refresh without leaving onboarding.
+          {t("onboarding.model.subtitle")}
         </p>
       </header>
 
       <div className="space-y-3 rounded-xl border bg-card/80 p-4">
         <div className="space-y-2 rounded-xl border border-dashed bg-background/50 p-4">
           <div className="space-y-1">
-            <h3 className="font-heading text-base font-semibold">Need an OpenRouter key?</h3>
+            <h3 className="font-heading text-base font-semibold">{t("onboarding.model.needKey")}</h3>
             <p className="text-sm text-muted-foreground">
-              Create an OpenRouter account or paste an existing key, then refresh
-              models without leaving this step.
+              {t("onboarding.model.needKeyDesc")}
             </p>
           </div>
 
@@ -170,14 +170,14 @@ export default function OnboardingModelPage() {
               rel="noreferrer"
               target="_blank"
             >
-              Create OpenRouter account
+              {t("onboarding.model.createAccount")}
             </a>
             <Button
               type="button"
               variant={showKeyInput ? "secondary" : "outline"}
               onClick={() => setShowKeyInput((current) => !current)}
             >
-              {showKeyInput ? "Hide key form" : "I already have a key"}
+              {showKeyInput ? t("onboarding.model.hideKeyForm") : t("onboarding.model.haveKey")}
             </Button>
           </div>
 
@@ -187,7 +187,7 @@ export default function OnboardingModelPage() {
                 className="text-sm text-muted-foreground"
                 htmlFor="openrouter-api-key"
               >
-                OpenRouter API key
+                {t("onboarding.model.keyLabel")}
               </label>
               <input
                 id="openrouter-api-key"
@@ -203,8 +203,7 @@ export default function OnboardingModelPage() {
                 className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
               />
               <p className="text-xs text-muted-foreground">
-                This saves the key into <strong>openclaw.json</strong> on this
-                machine.
+                {t("onboarding.model.keyHint")}
               </p>
 
               {saveKeySuccess ? (
@@ -221,7 +220,7 @@ export default function OnboardingModelPage() {
                   disabled={savingKey}
                   onClick={() => void handleSaveOpenRouterKey()}
                 >
-                  {savingKey ? "Saving key..." : "Save key"}
+                  {savingKey ? t("onboarding.model.savingKey") : t("onboarding.model.saveKey")}
                 </Button>
                 <Button
                   type="button"
@@ -229,7 +228,7 @@ export default function OnboardingModelPage() {
                   disabled={loading || status !== "connected"}
                   onClick={() => void loadModels()}
                 >
-                  {loading ? "Refreshing..." : "Refresh models"}
+                  {loading ? t("onboarding.model.refreshing") : t("onboarding.model.refreshModels")}
                 </Button>
               </div>
             </div>
@@ -237,7 +236,7 @@ export default function OnboardingModelPage() {
         </div>
 
         <label className="text-sm text-muted-foreground" htmlFor="model-select">
-          Available Models
+          {t("onboarding.model.availableModels")}
         </label>
         <Select
           value={selectedModel}
@@ -246,7 +245,9 @@ export default function OnboardingModelPage() {
           }}
         >
           <SelectTrigger id="model-select" className="w-full">
-            <SelectValue placeholder={loading ? "Loading models..." : "Select a model"} />
+            <SelectValue
+              placeholder={loading ? t("onboarding.model.loadingModels") : t("onboarding.model.selectModel")}
+            />
           </SelectTrigger>
           <SelectContent>
             {models.map((model) => (
@@ -259,7 +260,7 @@ export default function OnboardingModelPage() {
 
         {selected ? (
           <p className="text-sm text-muted-foreground">
-            Selected: <strong>{selected.name}</strong> by {selected.provider}
+            {t("onboarding.model.selected")}: <strong>{selected.name}</strong> {t("onboarding.model.by")} {selected.provider}
           </p>
         ) : null}
 
@@ -275,7 +276,7 @@ export default function OnboardingModelPage() {
           disabled={loading || status !== "connected"}
           onClick={() => void loadModels()}
         >
-          {loading ? "Refreshing..." : "Retry"}
+          {loading ? t("onboarding.model.refreshing") : t("onboarding.model.retry")}
         </Button>
         <Button
           type="button"
@@ -303,7 +304,7 @@ export default function OnboardingModelPage() {
             }
           }}
         >
-          {savingSelection ? "Saving..." : "Next"}
+          {savingSelection ? t("onboarding.model.saving") : t("common.next")}
         </Button>
       </div>
     </section>

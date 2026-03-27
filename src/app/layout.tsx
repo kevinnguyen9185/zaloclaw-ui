@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Geist_Mono, Lexend } from "next/font/google";
 import "./globals.css";
 import { GatewayProvider } from "@/lib/gateway/context";
+import { LocalizationProvider } from "@/lib/i18n/context";
 import { ThemeProvider } from "@/lib/theme/context";
 import { getThemeBootstrapScript } from "@/lib/theme/engine";
 
@@ -36,16 +37,18 @@ export default function RootLayout({
 
   return (
     <html
-      lang="en"
+      lang="vi"
       className={`${beVietnam.variable} ${geistMono.variable} ${lexend.variable} h-full antialiased`}
     >
       <head>
         <script dangerouslySetInnerHTML={{ __html: bootstrapScript }} />
       </head>
       <body className="min-h-full flex flex-col">
-        <GatewayProvider>
-          <ThemeProvider>{children}</ThemeProvider>
-        </GatewayProvider>
+        <LocalizationProvider>
+          <GatewayProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </GatewayProvider>
+        </LocalizationProvider>
       </body>
     </html>
   );

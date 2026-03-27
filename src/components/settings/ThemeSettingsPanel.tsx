@@ -10,6 +10,14 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useLocalization } from "@/lib/i18n/context";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/lib/theme/context";
 import { THEME_NAMES, type ThemeMode, type ThemeName } from "@/lib/theme/types";
@@ -34,10 +42,10 @@ const THEME_SWATCHES: Record<ThemeName, string> = {
   emerald: "#059669",
 };
 
-const MODE_OPTIONS: Array<{ id: ThemeMode; label: string }> = [
-  { id: "light", label: "Light" },
-  { id: "dark", label: "Dark" },
-  { id: "system", label: "System" },
+const MODE_OPTIONS: Array<{ id: ThemeMode; labelKey: string }> = [
+  { id: "light", labelKey: "settings.theme.mode.light" },
+  { id: "dark", labelKey: "settings.theme.mode.dark" },
+  { id: "system", labelKey: "settings.theme.mode.system" },
 ];
 
 const PRESET_HUES = [
@@ -58,18 +66,33 @@ function swatchStyle(hue: number): string {
 
 export function ThemeSettingsPanel() {
   const { theme, mode, accentHue, setTheme, setMode, setAccent } = useTheme();
+  const { locale, setLocale, t } = useLocalization();
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Theme Settings</CardTitle>
+        <CardTitle>{t("settings.theme.title")}</CardTitle>
         <CardDescription>
-          Personalize the interface with a base theme, accent hue, and mode.
+          {t("settings.theme.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
         <section className="space-y-2">
-          <h3 className="text-sm font-medium">Base Theme</h3>
+          <h3 className="text-sm font-medium">{t("settings.language.title")}</h3>
+          <p className="text-sm text-muted-foreground">{t("settings.language.description")}</p>
+          <Select value={locale} onValueChange={(value) => setLocale(value as "vi" | "en")}>
+            <SelectTrigger className="w-full sm:w-56">
+              <SelectValue placeholder={t("common.languageLabel")} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="vi">{t("common.languageVietnamese")}</SelectItem>
+              <SelectItem value="en">{t("common.languageEnglish")}</SelectItem>
+            </SelectContent>
+          </Select>
+        </section>
+
+        <section className="space-y-2">
+          <h3 className="text-sm font-medium">{t("settings.theme.baseTheme")}</h3>
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             {THEME_NAMES.map((name) => {
               const selected = theme === name;
@@ -96,7 +119,7 @@ export function ThemeSettingsPanel() {
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-sm font-medium">Accent Presets</h3>
+          <h3 className="text-sm font-medium">{t("settings.theme.accentPresets")}</h3>
           <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
             {PRESET_HUES.map((preset) => {
               const selected = accentHue === preset.hue;
@@ -125,7 +148,7 @@ export function ThemeSettingsPanel() {
           </div>
           <div className="space-y-2">
             <label className="text-xs text-muted-foreground" htmlFor="accent-hue">
-              Accent hue: {accentHue ?? 210}deg
+              {t("settings.theme.accentHue")}: {accentHue ?? 210}deg
             </label>
             <input
               id="accent-hue"
@@ -140,12 +163,12 @@ export function ThemeSettingsPanel() {
             />
           </div>
           <Button type="button" variant="outline" onClick={() => setAccent(null)}>
-            Reset accent
+            {t("settings.theme.resetAccent")}
           </Button>
         </section>
 
         <section className="space-y-2">
-          <h3 className="text-sm font-medium">Mode</h3>
+          <h3 className="text-sm font-medium">{t("settings.theme.mode")}</h3>
           <div className="flex flex-wrap gap-2">
             {MODE_OPTIONS.map((option) => (
               <Button
@@ -154,7 +177,7 @@ export function ThemeSettingsPanel() {
                 variant={mode === option.id ? "default" : "outline"}
                 onClick={() => setMode(option.id)}
               >
-                {option.label}
+                {t(option.labelKey)}
               </Button>
             ))}
           </div>

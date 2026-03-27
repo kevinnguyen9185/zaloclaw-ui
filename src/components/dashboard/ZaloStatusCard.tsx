@@ -10,9 +10,9 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { useGateway } from "@/lib/gateway/context";
+import { useLocalization } from "@/lib/i18n/context";
 import { loadOnboardingState } from "@/lib/onboarding/storage";
 
 function isZaloConnected(payload: unknown): boolean {
@@ -46,6 +46,7 @@ function isZaloConnected(payload: unknown): boolean {
 
 export function ZaloStatusCard() {
   const { status, send } = useGateway();
+  const { t } = useLocalization();
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skipped, setSkipped] = useState(false);
@@ -79,7 +80,7 @@ export function ZaloStatusCard() {
         const message =
           caught instanceof Error
             ? caught.message
-            : "Failed to load Zalo status";
+            : t("dashboard.zalo.error");
         setError(message);
       }
     };
@@ -89,13 +90,13 @@ export function ZaloStatusCard() {
     return () => {
       cancelled = true;
     };
-  }, [send, status]);
+  }, [send, status, t]);
 
   return (
     <Card className="animate-card-enter-2">
       <CardHeader className="pb-2">
         <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          Zalo Channel
+          {t("dashboard.zalo.label")}
         </CardDescription>
         <CardTitle className="flex items-center gap-2 text-xl">
           <span
@@ -105,7 +106,7 @@ export function ZaloStatusCard() {
             ].join(" ")}
             aria-hidden="true"
           />
-          {connected ? "Connected" : "Not connected"}
+          {connected ? t("common.connected") : t("dashboard.zalo.notPaired")}
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
@@ -115,7 +116,7 @@ export function ZaloStatusCard() {
             href="/zalo"
             className={buttonVariants({ size: "sm", variant: "outline" })}
           >
-            Connect Zalo
+            {t("dashboard.zalo.connectAction")}
           </Link>
         )}
       </CardContent>

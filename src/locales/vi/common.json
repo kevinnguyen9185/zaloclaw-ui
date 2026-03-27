@@ -1,0 +1,15 @@
+{
+  "languageLabel": "Ngôn ngữ",
+  "languageVietnamese": "Tiếng Việt",
+  "languageEnglish": "English",
+  "loading": "Đang tải...",
+  "retry": "Thử lại",
+  "next": "Tiếp theo",
+  "save": "Lưu",
+  "refresh": "Làm mới",
+  "connected": "Đã kết nối",
+  "notConnected": "Chưa kết nối",
+  "gateway": "Gateway",
+  "connecting": "Đang kết nối",
+  "disconnected": "Đã ngắt kết nối"
+}

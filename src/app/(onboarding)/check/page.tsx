@@ -14,6 +14,7 @@ import {
   TOKEN_STORAGE_KEY,
 } from "@/lib/gateway/client";
 import { useGateway } from "@/lib/gateway/context";
+import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
 
 type ControlUiConfig = {
@@ -25,6 +26,7 @@ export default function OnboardingCheckPage() {
   const router = useRouter();
   const { status, error } = useGateway();
   const { setStep } = useOnboarding();
+  const { t } = useLocalization();
 
   const [config, setConfig] = useState<ControlUiConfig | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,30 +99,33 @@ export default function OnboardingCheckPage() {
     <section className="space-y-5">
       <header className="space-y-2">
         <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
-          Step 1 · Gateway Ready
+          {t("onboarding.check.eyebrow")}
         </p>
         <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
-          Let&apos;s make sure your assistant can reach OpenClaw
+          {t("onboarding.check.title")}
         </h2>
         <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
-          We will verify config access, real-time connection, and authentication so
-          the next setup steps are smooth.
+          {t("onboarding.check.subtitle")}
         </p>
       </header>
 
       <div className="space-y-2 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">Gateway Config</span>
+          <span className="text-sm text-muted-foreground">{t("onboarding.check.gatewayConfig")}</span>
           <Badge variant={fetchError ? "destructive" : "secondary"}>
-            {loading ? "Loading" : fetchError ? "Unavailable" : "Loaded"}
+            {loading
+              ? t("onboarding.check.loading")
+              : fetchError
+                ? t("onboarding.check.unavailable")
+                : t("onboarding.check.loaded")}
           </Badge>
         </div>
 
         <p className="text-sm">
-          Assistant: <strong>{config?.assistantName ?? "Unknown"}</strong>
+          {t("onboarding.check.assistant")}: <strong>{config?.assistantName ?? t("settings.config.unknown")}</strong>
         </p>
         <p className="text-sm">
-          Version: <strong>{config?.serverVersion ?? "Unknown"}</strong>
+          {t("onboarding.check.version")}: <strong>{config?.serverVersion ?? t("settings.config.unknown")}</strong>
         </p>
         {fetchError ? (
           <p className="text-sm text-destructive">{fetchError}</p>
@@ -129,21 +134,21 @@ export default function OnboardingCheckPage() {
 
       <div className="space-y-2 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-sm text-muted-foreground">WebSocket Status</span>
+          <span className="text-sm text-muted-foreground">{t("onboarding.check.wsStatus")}</span>
           <Badge variant={canContinue ? "default" : "outline"}>{status}</Badge>
         </div>
         <p className="text-sm text-muted-foreground">
-          {error ?? "Connection is being managed by GatewayProvider."}
+          {error ?? t("onboarding.check.wsManaged")}
         </p>
       </div>
 
       <div className="space-y-3 rounded-xl border bg-card/80 p-4">
         <div className="space-y-1">
-          <h3 className="font-heading text-base font-semibold">Gateway Token</h3>
+          <h3 className="font-heading text-base font-semibold">{t("onboarding.check.tokenTitle")}</h3>
           <p className="text-sm text-muted-foreground">
             {needsToken
-              ? "Authentication is required. Enter your OpenClaw token and reconnect. Device credentials are generated automatically."
-              : "Great, token already exists for this session. Device credentials remain managed automatically."}
+              ? t("onboarding.check.tokenNeeded")
+              : t("onboarding.check.tokenExists")}
           </p>
         </div>
 
@@ -151,7 +156,7 @@ export default function OnboardingCheckPage() {
           type="password"
           value={token}
           onChange={(event) => setToken(event.target.value)}
-          placeholder="Paste gateway token"
+          placeholder={t("onboarding.check.tokenPlaceholder")}
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
         />
 
@@ -160,7 +165,7 @@ export default function OnboardingCheckPage() {
           variant="ghost"
           onClick={() => setShowAdvanced((value) => !value)}
         >
-          {showAdvanced ? "Hide advanced device settings" : "Show advanced device settings"}
+          {showAdvanced ? t("onboarding.check.hideAdvanced") : t("onboarding.check.showAdvanced")}
         </Button>
 
         {showAdvanced ? (
@@ -168,26 +173,26 @@ export default function OnboardingCheckPage() {
             <input
               value={deviceId}
               onChange={(event) => setDeviceId(event.target.value)}
-              placeholder="Device ID (optional override)"
+              placeholder={t("onboarding.check.deviceId")}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
             />
             <input
               value={publicKey}
               onChange={(event) => setPublicKey(event.target.value)}
-              placeholder="Device public key (optional override)"
+              placeholder={t("onboarding.check.devicePublicKey")}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
             />
             <input
               type="password"
               value={privateKey}
               onChange={(event) => setPrivateKey(event.target.value)}
-              placeholder="Device private key (optional override)"
+              placeholder={t("onboarding.check.devicePrivateKey")}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
             />
             <input
               value={deviceToken}
               onChange={(event) => setDeviceToken(event.target.value)}
-              placeholder="Device token (optional)"
+              placeholder={t("onboarding.check.deviceToken")}
               className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
             />
           </div>
@@ -231,7 +236,7 @@ export default function OnboardingCheckPage() {
               window.location.reload();
             }}
           >
-            Save Token and Reconnect
+            {t("onboarding.check.saveReconnect")}
           </Button>
           <Button
             type="button"
@@ -254,7 +259,7 @@ export default function OnboardingCheckPage() {
               window.location.reload();
             }}
           >
-            Clear Token
+            {t("onboarding.check.clearToken")}
           </Button>
         </div>
       </div>
@@ -263,7 +268,7 @@ export default function OnboardingCheckPage() {
 
       <div className="flex flex-wrap gap-3">
         <Button type="button" variant="outline" onClick={() => void fetchConfig()}>
-          Retry
+          {t("common.retry")}
         </Button>
         <Button
           type="button"
@@ -273,7 +278,7 @@ export default function OnboardingCheckPage() {
             router.push("/model");
           }}
         >
-          Next
+          {t("common.next")}
         </Button>
       </div>
     </section>

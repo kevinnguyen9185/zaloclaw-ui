@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { createGatewayConfigService } from "@/lib/gateway/config";
 import { useGateway } from "@/lib/gateway/context";
+import { useLocalization } from "@/lib/i18n/context";
 
 type ConfigSummary = {
   model: string | null;
@@ -20,6 +21,7 @@ type ConfigSummary = {
 
 export function ConfigSummaryCard() {
   const { status, send } = useGateway();
+  const { t } = useLocalization();
   const [summary, setSummary] = useState<ConfigSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -53,7 +55,7 @@ export function ConfigSummaryCard() {
         const message =
           caught instanceof Error
             ? caught.message
-            : "Failed to load gateway configuration summary";
+            : t("settings.config.error");
         setError(message);
       }
     };
@@ -63,23 +65,23 @@ export function ConfigSummaryCard() {
     return () => {
       cancelled = true;
     };
-  }, [send, status]);
+  }, [send, status, t]);
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Gateway Configuration</CardTitle>
+        <CardTitle>{t("settings.config.title")}</CardTitle>
         <CardDescription>
-          Structured config values loaded from config.get.
+          {t("settings.config.description")}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-1 text-sm text-muted-foreground">
         {error ? <p className="text-destructive">{error}</p> : null}
         {!error ? (
           <>
-            <p>Primary model: {summary?.model ?? "Not set"}</p>
-            <p>Gateway mode: {summary?.gatewayMode ?? "Unknown"}</p>
-            <p>Gateway bind: {summary?.gatewayBind ?? "Unknown"}</p>
+            <p>{t("settings.config.primaryModel")}: {summary?.model ?? t("settings.config.notSet")}</p>
+            <p>{t("settings.config.gatewayMode")}: {summary?.gatewayMode ?? t("settings.config.unknown")}</p>
+            <p>{t("settings.config.gatewayBind")}: {summary?.gatewayBind ?? t("settings.config.unknown")}</p>
           </>
         ) : null}
       </CardContent>
