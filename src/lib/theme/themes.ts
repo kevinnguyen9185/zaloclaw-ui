@@ -7,7 +7,8 @@ const BASE_LIGHT: ThemeTokens = {
   "--card-foreground": "oklch(0.145 0 0)",
   "--popover": "oklch(1 0 0)",
   "--popover-foreground": "oklch(0.145 0 0)",
-  "--primary": "oklch(0.205 0 0)",
+  // Zalo blue primary — restrained to CTAs, active states, and key highlights
+  "--primary": "oklch(0.56 0.18 210)",
   "--primary-foreground": "oklch(0.985 0 0)",
   "--secondary": "oklch(0.97 0 0)",
   "--secondary-foreground": "oklch(0.205 0 0)",
@@ -18,7 +19,7 @@ const BASE_LIGHT: ThemeTokens = {
   "--destructive": "oklch(0.577 0.245 27.325)",
   "--border": "oklch(0.922 0 0)",
   "--input": "oklch(0.922 0 0)",
-  "--ring": "oklch(0.708 0 0)",
+  "--ring": "oklch(0.68 0.14 210)",
   "--chart-1": "oklch(0.87 0 0)",
   "--chart-2": "oklch(0.556 0 0)",
   "--chart-3": "oklch(0.439 0 0)",
@@ -27,12 +28,12 @@ const BASE_LIGHT: ThemeTokens = {
   "--radius": "0.625rem",
   "--sidebar": "oklch(0.985 0 0)",
   "--sidebar-foreground": "oklch(0.145 0 0)",
-  "--sidebar-primary": "oklch(0.205 0 0)",
+  "--sidebar-primary": "oklch(0.56 0.18 210)",
   "--sidebar-primary-foreground": "oklch(0.985 0 0)",
   "--sidebar-accent": "oklch(0.97 0 0)",
   "--sidebar-accent-foreground": "oklch(0.205 0 0)",
   "--sidebar-border": "oklch(0.922 0 0)",
-  "--sidebar-ring": "oklch(0.708 0 0)",
+  "--sidebar-ring": "oklch(0.68 0.14 210)",
 };
 
 const BASE_DARK: ThemeTokens = {

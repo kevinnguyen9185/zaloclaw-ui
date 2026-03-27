@@ -139,19 +139,24 @@ export default function OnboardingModelPage() {
   }, [loadModels, openRouterKey]);
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Step 2: Select Model</h2>
-        <p className="text-sm text-muted-foreground">
-          Choose the model for your assistant session, or add an OpenRouter key if
-          you need more models.
+    <section className="space-y-5">
+      <header className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
+          Step 2 · Model Intelligence
+        </p>
+        <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
+          Choose the brain for your assistant
+        </h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Pick the model experience you want. You can add your OpenRouter key here
+          and refresh without leaving onboarding.
         </p>
       </header>
 
-      <div className="space-y-3 rounded-lg border p-4">
-        <div className="space-y-2 rounded-lg border border-dashed p-4">
+      <div className="space-y-3 rounded-xl border bg-card/80 p-4">
+        <div className="space-y-2 rounded-xl border border-dashed bg-background/50 p-4">
           <div className="space-y-1">
-            <h3 className="text-sm font-semibold">Need an OpenRouter key?</h3>
+            <h3 className="font-heading text-base font-semibold">Need an OpenRouter key?</h3>
             <p className="text-sm text-muted-foreground">
               Create an OpenRouter account or paste an existing key, then refresh
               models without leaving this step.

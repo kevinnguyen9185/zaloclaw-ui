@@ -3,11 +3,7 @@ import { ThemeSettingsPanel } from "@/components/settings/ThemeSettingsPanel";
 
 export default function SettingsPage() {
   return (
-    <section className="space-y-4">
-      <h1 className="text-2xl font-semibold">Settings</h1>
-      <p className="text-sm text-muted-foreground">
-        Settings now read structured gateway config through a shared service.
-      </p>
+    <section className="space-y-4 animate-card-enter">
       <ThemeSettingsPanel />
       <ConfigSummaryCard />
     </section>

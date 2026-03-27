@@ -94,15 +94,21 @@ export default function OnboardingCheckPage() {
   const needsToken = !token || error?.includes("1008") === true;
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Step 1: Check Gateway</h2>
-        <p className="text-sm text-muted-foreground">
-          Verify OpenClaw is reachable and WebSocket is connected.
+    <section className="space-y-5">
+      <header className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
+          Step 1 · Gateway Ready
+        </p>
+        <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
+          Let&apos;s make sure your assistant can reach OpenClaw
+        </h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          We will verify config access, real-time connection, and authentication so
+          the next setup steps are smooth.
         </p>
       </header>
 
-      <div className="space-y-2 rounded-lg border p-4">
+      <div className="space-y-2 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">Gateway Config</span>
           <Badge variant={fetchError ? "destructive" : "secondary"}>
@@ -121,7 +127,7 @@ export default function OnboardingCheckPage() {
         ) : null}
       </div>
 
-      <div className="space-y-2 rounded-lg border p-4">
+      <div className="space-y-2 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">WebSocket Status</span>
           <Badge variant={canContinue ? "default" : "outline"}>{status}</Badge>
@@ -131,13 +137,13 @@ export default function OnboardingCheckPage() {
         </p>
       </div>
 
-      <div className="space-y-3 rounded-lg border p-4">
+      <div className="space-y-3 rounded-xl border bg-card/80 p-4">
         <div className="space-y-1">
-          <h3 className="text-sm font-medium">Gateway Token</h3>
+          <h3 className="font-heading text-base font-semibold">Gateway Token</h3>
           <p className="text-sm text-muted-foreground">
             {needsToken
               ? "Authentication is required. Enter your OpenClaw token and reconnect. Device credentials are generated automatically."
-              : "Token loaded from current session. Device credentials are managed automatically."}
+              : "Great, token already exists for this session. Device credentials remain managed automatically."}
           </p>
         </div>
 

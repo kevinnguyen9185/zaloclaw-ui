@@ -92,25 +92,31 @@ export function ZaloStatusCard() {
   }, [send, status]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Zalo Status</CardTitle>
-        <CardDescription>Channel pairing for assistant delivery.</CardDescription>
+    <Card className="animate-card-enter-2">
+      <CardHeader className="pb-2">
+        <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Zalo Channel
+        </CardDescription>
+        <CardTitle className="flex items-center gap-2 text-xl">
+          <span
+            className={[
+              "inline-block h-2 w-2 rounded-full",
+              connected ? "bg-emerald-500" : "bg-muted-foreground/40",
+            ].join(" ")}
+            aria-hidden="true"
+          />
+          {connected ? "Connected" : "Not connected"}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
-
-        {connected ? (
-          <Badge>Connected</Badge>
-        ) : (
-          <div className="flex items-center gap-3">
-            <Badge variant="outline">Not connected</Badge>
-            {skipped ? (
-              <Link href="/zalo" className={buttonVariants({ size: "sm", variant: "outline" })}>
-                Connect Zalo
-              </Link>
-            ) : null}
-          </div>
+        {!connected && skipped && (
+          <Link
+            href="/zalo"
+            className={buttonVariants({ size: "sm", variant: "outline" })}
+          >
+            Connect Zalo
+          </Link>
         )}
       </CardContent>
     </Card>

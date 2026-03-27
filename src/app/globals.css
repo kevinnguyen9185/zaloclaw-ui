@@ -7,9 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-be-vietnam);
   --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-sans);
+  --font-heading: var(--font-lexend);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -49,14 +49,15 @@
 }
 
 :root {
-  /* Zinc base theme (light mode); runtime engine overrides these tokens. */
+  /* Zinc base theme (light mode) with Zalo Blue accent; runtime engine overrides these tokens. */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
+  /* Zalo blue primary — restrained to CTAs, active states, and key highlights */
+  --primary: oklch(0.56 0.18 210);
   --primary-foreground: oklch(0.985 0 0);
   --secondary: oklch(0.97 0 0);
   --secondary-foreground: oklch(0.205 0 0);
@@ -67,7 +68,7 @@
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.68 0.14 210);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -76,24 +77,25 @@
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
+  --sidebar-primary: oklch(0.56 0.18 210);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.97 0 0);
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.68 0.14 210);
 }
 
 .dark {
-  /* Zinc base theme (dark mode); runtime engine overrides these tokens. */
+  /* Zinc base theme (dark mode) with Zalo Blue accent; runtime engine overrides these tokens. */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
+  /* Zalo blue primary for dark mode — restrained to CTAs, active states, and key highlights */
+  --primary: oklch(0.76 0.14 210);
+  --primary-foreground: oklch(0.145 0 0);
   --secondary: oklch(0.269 0 0);
   --secondary-foreground: oklch(0.985 0 0);
   --muted: oklch(0.269 0 0);
@@ -103,7 +105,7 @@
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
+  --ring: oklch(0.72 0.14 210);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -111,12 +113,12 @@
   --chart-5: oklch(0.269 0 0);
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.76 0.14 210);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.72 0.14 210);
 }
 
 @layer base {
@@ -125,8 +127,70 @@
   }
   body {
     @apply bg-background text-foreground;
+    line-height: 1.55;
   }
   html {
     @apply font-sans;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    letter-spacing: -0.01em;
+    text-wrap: balance;
+  }
+
+  h1 {
+    line-height: 1.15;
+  }
+
+  h2,
+  h3 {
+    line-height: 1.2;
+  }
+}
+
+/* ─── Motion primitives ─────────────────────────────────────── */
+@keyframes hero-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes card-enter {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes status-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@layer utilities {
+  .animate-hero-enter {
+    animation: hero-enter 0.35s ease-out both;
+  }
+  .animate-card-enter {
+    animation: card-enter 0.25s ease-out both;
+  }
+  /* Stagger helpers for card grids */
+  .animate-card-enter-1 { animation: card-enter 0.25s 0.05s ease-out both; }
+  .animate-card-enter-2 { animation: card-enter 0.25s 0.1s  ease-out both; }
+  .animate-card-enter-3 { animation: card-enter 0.25s 0.15s ease-out both; }
+  .animate-status-fade {
+    animation: status-fade 0.2s ease-out both;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-hero-enter,
+    .animate-card-enter,
+    .animate-card-enter-1,
+    .animate-card-enter-2,
+    .animate-card-enter-3,
+    .animate-status-fade {
+      animation: none;
+    }
   }
 }

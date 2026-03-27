@@ -84,15 +84,21 @@ export default function OnboardingZaloPage() {
   }, [checkStatus, status]);
 
   return (
-    <section className="space-y-4">
-      <header className="space-y-1">
-        <h2 className="text-lg font-semibold">Step 3: Pair Zalo</h2>
-        <p className="text-sm text-muted-foreground">
-          Connect your Zalo channel now, or skip and continue setup.
+    <section className="space-y-5">
+      <header className="space-y-2">
+        <p className="text-xs font-medium uppercase tracking-[0.14em] text-primary/90">
+          Step 3 · Zalo Connection
+        </p>
+        <h2 className="font-heading text-2xl font-semibold text-foreground sm:text-[1.75rem]">
+          Pair your Zalo channel when you&apos;re ready
+        </h2>
+        <p className="max-w-2xl text-sm leading-relaxed text-muted-foreground">
+          Connect now for immediate message delivery, or skip this step and finish
+          setup first.
         </p>
       </header>
 
-      <div className="space-y-2 rounded-lg border p-4">
+      <div className="space-y-2 rounded-xl border bg-card/80 p-4">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm text-muted-foreground">Zalo Status</span>
           <Badge variant={connected ? "default" : "outline"}>

@@ -75,18 +75,26 @@ export function ActiveModelCard() {
   }, [send, status]);
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Active Model</CardTitle>
-        <CardDescription>Current assistant runtime model.</CardDescription>
+    <Card className="animate-card-enter-1">
+      <CardHeader className="pb-2">
+        <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          Active Model
+        </CardDescription>
+        <CardTitle className="text-xl">
+          {error ? (
+            <span className="text-destructive text-base font-normal">{error}</span>
+          ) : model ? (
+            model.name
+          ) : (
+            <span className="text-muted-foreground text-base font-normal">No model configured</span>
+          )}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        {error ? (
-          <p className="text-sm text-destructive">{error}</p>
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            {model ? `${model.name} (${model.provider})` : "No model available"}
-          </p>
+        {model && !error && (
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+            {model.provider}
+          </span>
         )}
       </CardContent>
     </Card>
