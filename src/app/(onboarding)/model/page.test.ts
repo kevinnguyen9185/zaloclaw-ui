@@ -4,6 +4,7 @@ import {
   extractDefaultSessionModelId,
   extractSessionModelList,
   findModelOptionByIdentifier,
+  formatModelOptionLabel,
   loadSessionModels,
   mergeSessionModels,
   normalizeModelIdentifier,
@@ -20,27 +21,27 @@ describe("onboarding model selection", () => {
   it("matches selected models by normalized identifier", () => {
     const models = [
       {
-        id: "openclaw-smart-router",
+        id: "litellm/openclaw-smart-router",
         name: "openclaw-smart-router",
         provider: "litellm",
       },
     ];
 
-    expect(findModelOptionByIdentifier(models, " OPENCLAW-SMART-ROUTER ")).toEqual(
-      models[0]
-    );
+    expect(
+      findModelOptionByIdentifier(models, " LITELLM/OPENCLAW-SMART-ROUTER ")
+    ).toEqual(models[0]);
     expect(findModelOptionByIdentifier(models, "unknown/model")).toBeNull();
   });
 
   it("keeps existing selection when model still exists", () => {
     const models = [
       {
-        id: "openclaw-smart-router",
+        id: "litellm/openclaw-smart-router",
         name: "openclaw-smart-router",
         provider: "litellm",
       },
       {
-        id: "openai/gpt-4o-mini",
+        id: "openrouter/openai/gpt-4o-mini",
         name: "GPT-4o mini",
         provider: "openrouter",
       },
@@ -48,21 +49,21 @@ describe("onboarding model selection", () => {
 
     expect(
       resolveSelectedModelId({
-        defaultModelId: "openai/gpt-4o-mini",
+        defaultModelId: "openrouter/openai/gpt-4o-mini",
         models,
       })
-    ).toBe("openai/gpt-4o-mini");
+    ).toBe("openrouter/openai/gpt-4o-mini");
   });
 
   it("defaults to first model when default is missing", () => {
     const models = [
       {
-        id: "openclaw-smart-router",
+        id: "litellm/openclaw-smart-router",
         name: "openclaw-smart-router",
         provider: "litellm",
       },
       {
-        id: "openai/gpt-4o-mini",
+        id: "openrouter/openai/gpt-4o-mini",
         name: "GPT-4o mini",
         provider: "openrouter",
       },
@@ -73,7 +74,7 @@ describe("onboarding model selection", () => {
         defaultModelId: "anthropic/claude-3.5-sonnet",
         models,
       })
-    ).toBe("openclaw-smart-router");
+    ).toBe("litellm/openclaw-smart-router");
   });
 
   it("returns empty selection when no models are available", () => {
@@ -96,7 +97,7 @@ describe("onboarding model selection", () => {
           },
         },
       })
-    ).toBe("openclaw-smart-router");
+    ).toBe("litellm/openclaw-smart-router");
   });
 
   it("extracts session model list from sessions payload", () => {
@@ -114,7 +115,7 @@ describe("onboarding model selection", () => {
       })
     ).toEqual([
       {
-        id: "openclaw-smart-router",
+        id: "litellm/openclaw-smart-router",
         name: "openclaw-smart-router",
         provider: "litellm",
       },
@@ -123,23 +124,56 @@ describe("onboarding model selection", () => {
 
   it("merges default model with session models and deduplicates by id", () => {
     const merged = mergeSessionModels(
-      "openclaw-smart-router",
+      "litellm/openclaw-smart-router",
       [
         {
-          id: "openai/gpt-4o-mini",
+          id: "openrouter/openai/gpt-4o-mini",
           name: "GPT-4o mini",
           provider: "openrouter",
         },
         {
-          id: "openclaw-smart-router",
+          id: "litellm/openclaw-smart-router",
           name: "OpenClaw Smart Router",
           provider: "openrouter",
         },
       ]
     );
 
-    expect(merged[0].id).toBe("openclaw-smart-router");
+    expect(merged[0].id).toBe("litellm/openclaw-smart-router");
     expect(merged).toHaveLength(2);
+  });
+
+  it("adds the current primary model as a fallback option when discovery misses it", () => {
+    expect(
+      mergeSessionModels("openrouter/openai/gpt-4o-mini", [
+        {
+          id: "litellm/openclaw-smart-router",
+          name: "openclaw-smart-router",
+          provider: "litellm",
+        },
+      ])
+    ).toEqual([
+      {
+        id: "openrouter/openai/gpt-4o-mini",
+        name: "openai/gpt-4o-mini",
+        provider: "openrouter",
+      },
+      {
+        id: "litellm/openclaw-smart-router",
+        name: "openclaw-smart-router",
+        provider: "litellm",
+      },
+    ]);
+  });
+
+  it("formats dropdown labels with provider context", () => {
+    expect(
+      formatModelOptionLabel({
+        id: "openrouter/openai/gpt-4o-mini",
+        name: "GPT-4o mini",
+        provider: "openrouter",
+      })
+    ).toBe("GPT-4o mini (openrouter)");
   });
 
   it("loads session models from gateway send function", async () => {
@@ -159,10 +193,10 @@ describe("onboarding model selection", () => {
     });
 
     await expect(loadSessionModels(sendValid)).resolves.toEqual({
-      defaultModelId: "openclaw-smart-router",
+      defaultModelId: "litellm/openclaw-smart-router",
       models: [
         {
-          id: "openclaw-smart-router",
+          id: "litellm/openclaw-smart-router",
           name: "openclaw-smart-router",
           provider: "litellm",
         },

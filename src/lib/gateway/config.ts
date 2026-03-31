@@ -36,6 +36,8 @@ export type NormalizedOpenClawConfig = {
     defaults: {
       model: {
         primary: string | null;
+        provider: string | null;
+        id: string | null;
       };
       models: Record<string, unknown>;
       workspace: string | null;
@@ -132,6 +134,72 @@ function readNumber(value: unknown): number | null {
 
 function readBoolean(value: unknown): boolean | null {
   return typeof value === "boolean" ? value : null;
+}
+
+function pruneNullishDeep(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value
+      .map((entry) => pruneNullishDeep(entry))
+      .filter((entry) => entry !== null && entry !== undefined);
+  }
+
+  if (!isObject(value)) {
+    return value;
+  }
+
+  const cleaned: Record<string, unknown> = {};
+
+  for (const [key, entry] of Object.entries(value)) {
+    if (entry === null || entry === undefined) {
+      continue;
+    }
+
+    const cleanedEntry = pruneNullishDeep(entry);
+    if (cleanedEntry === null || cleanedEntry === undefined) {
+      continue;
+    }
+
+    cleaned[key] = cleanedEntry;
+  }
+
+  return cleaned;
+}
+
+function sanitizeProvidersForSave(source: Record<string, unknown>): Record<string, unknown> {
+  const next = cloneRecord(source);
+  const models = isObject(next.models) ? next.models : null;
+
+  if (!models) {
+    return (pruneNullishDeep(next) as Record<string, unknown>) ?? {};
+  }
+
+  const providers = isObject(models.providers) ? models.providers : null;
+  if (!providers) {
+    return (pruneNullishDeep(next) as Record<string, unknown>) ?? {};
+  }
+
+  for (const [providerKey, providerValue] of Object.entries(providers)) {
+    if (!isObject(providerValue)) {
+      continue;
+    }
+
+    if (providerKey !== "litellm") {
+        providerValue.baseUrl = "";
+      continue;
+    }
+
+    const baseUrl = typeof providerValue.baseUrl === "string"
+      ? providerValue.baseUrl.trim()
+      : "";
+
+    if (!baseUrl) {
+      delete providerValue.baseUrl;
+    } else {
+      providerValue.baseUrl = baseUrl;
+    }
+  }
+
+  return (pruneNullishDeep(next) as Record<string, unknown>) ?? {};
 }
 
 function toPathSegments(path: ConfigPath): string[] {
@@ -313,6 +381,10 @@ export function normalizeGatewayConfig(payload: unknown): GatewayConfigSnapshot 
       defaults: {
         model: {
           primary: readString(modelDefaults.primary),
+          provider: readString(modelDefaults.provider),
+          id:
+            readString(modelDefaults.id) ??
+            normalizeModelIdentifier(readString(modelDefaults.primary)),
         },
         models: isObject(defaults.models) ? defaults.models : {},
         workspace: readString(defaults.workspace),
@@ -456,7 +528,13 @@ export function toPrimaryModelReference(
   const normalizedProvider = provider.trim();
 
   if (normalizedModelId.includes("/")) {
-    return normalizedModelId;
+    if (!normalizedProvider) {
+      return normalizedModelId;
+    }
+
+    return normalizedModelId.startsWith(`${normalizedProvider}/`)
+      ? normalizedModelId
+      : `${normalizedProvider}/${normalizedModelId}`;
   }
 
   if (!normalizedProvider) {
@@ -464,6 +542,12 @@ export function toPrimaryModelReference(
   }
 
   return `${normalizedProvider}/${normalizedModelId}`;
+}
+
+export function sanitizeGatewayConfigForSave(
+  source: Record<string, unknown>
+): Record<string, unknown> {
+  return sanitizeProvidersForSave(source);
 }
 
 export function toConfigServiceError(
@@ -487,7 +571,9 @@ export function createGatewayConfigService(send: GatewaySendFn) {
     },
     async update(operations: ConfigPatchOperation[]): Promise<GatewayConfigSnapshot> {
       const current = await this.load();
-      const nextConfig = applyConfigPatch(current.normalized.source, operations);
+      const nextConfig = sanitizeGatewayConfigForSave(
+        applyConfigPatch(current.normalized.source, operations)
+      );
 
       try {
         await send("config.set", {

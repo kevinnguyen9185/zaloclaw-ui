@@ -7,37 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useGateway } from "@/lib/gateway/context";
+import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
-
-function isZaloConnected(payload: unknown): boolean {
-  if (!payload || typeof payload !== "object") {
-    return false;
-  }
-
-  const data = payload as Record<string, unknown>;
-
-  // channels.status response: payload.channels is a dict keyed by channel id
-  if (data.channels && typeof data.channels === "object" && !Array.isArray(data.channels)) {
-    const channels = data.channels as Record<string, unknown>;
-    const zalo = channels.zalo;
-    if (zalo && typeof zalo === "object") {
-      const entry = zalo as Record<string, unknown>;
-      return entry.running === true;
-    }
-  }
-
-  // channelAccounts fallback
-  if (data.channelAccounts && typeof data.channelAccounts === "object") {
-    const accounts = data.channelAccounts as Record<string, unknown>;
-    const zaloAccounts = Array.isArray(accounts.zalo) ? accounts.zalo : [];
-    return zaloAccounts.some(
-      (a) => a && typeof a === "object" && (a as Record<string, unknown>).running === true
-    );
-  }
-
-  return false;
-}
+import {
+  executePairingGuide,
+  loadZaloConfigState,
+  saveZaloBotToken,
+} from "./config-service";
 
 export default function OnboardingZaloPage() {
   const router = useRouter();
@@ -48,6 +25,13 @@ export default function OnboardingZaloPage() {
   const [checking, setChecking] = useState(false);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [botToken, setBotToken] = useState("");
+  const [hasBotToken, setHasBotToken] = useState(false);
+  const [savingToken, setSavingToken] = useState(false);
+  const [tokenMessage, setTokenMessage] = useState<string | null>(null);
+  const [pairingGuide, setPairingGuide] = useState("");
+  const [executingGuide, setExecutingGuide] = useState(false);
+  const [guideMessage, setGuideMessage] = useState<string | null>(null);
 
   const checkStatus = useCallback(async () => {
     if (status !== "connected") {
@@ -58,8 +42,8 @@ export default function OnboardingZaloPage() {
     setError(null);
 
     try {
-      const response = await send("channels.status", {});
-      setConnected(isZaloConnected(response));
+      const response = await send("channels.status", { probe: true });
+      setConnected(isZaloConnectedFromChannelsStatus(response));
     } catch (caught) {
       const message =
         caught instanceof Error
@@ -76,14 +60,51 @@ export default function OnboardingZaloPage() {
       return;
     }
 
+    let cancelled = false;
+
+    const loadConfig = async () => {
+      try {
+        const configState = await loadZaloConfigState(send);
+        if (cancelled) {
+          return;
+        }
+
+        setBotToken(configState.botToken);
+        setHasBotToken(configState.hasBotToken);
+      } catch (caught) {
+        if (cancelled) {
+          return;
+        }
+
+        const message =
+          caught instanceof Error
+            ? caught.message
+            : t("onboarding.zalo.configLoadError");
+        setError(message);
+      }
+    };
+
+    void loadConfig();
     void checkStatus();
 
     const timer = window.setInterval(() => {
       void checkStatus();
     }, 3000);
 
-    return () => window.clearInterval(timer);
-  }, [checkStatus, status]);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [checkStatus, send, status, t]);
+
+  const needsBotToken = !connected || !hasBotToken;
+  const canSaveToken =
+    status === "connected" && !savingToken && botToken.trim().length > 0;
+  const canExecuteGuide =
+    status === "connected" &&
+    hasBotToken &&
+    !executingGuide &&
+    pairingGuide.trim().length > 0;
 
   return (
     <section className="space-y-5">
@@ -111,6 +132,122 @@ export default function OnboardingZaloPage() {
         </p>
         {error ? <p className="text-sm text-destructive">{error}</p> : null}
       </div>
+
+      {needsBotToken ? (
+        <div className="space-y-3 rounded-xl border bg-card/80 p-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              {t("onboarding.zalo.botTokenLabel")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("onboarding.zalo.botTokenHint")}
+            </p>
+          </div>
+
+          <input
+            id="zalo-bot-token"
+            className="w-full rounded-md border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            type="password"
+            value={botToken}
+            placeholder={t("onboarding.zalo.botTokenPlaceholder")}
+            onChange={(event) => {
+              setBotToken(event.target.value);
+              setTokenMessage(null);
+            }}
+          />
+
+          {tokenMessage ? (
+            <p className="text-sm text-muted-foreground">{tokenMessage}</p>
+          ) : null}
+
+          <div>
+            <Button
+              type="button"
+              disabled={!canSaveToken}
+              onClick={async () => {
+                setSavingToken(true);
+                setTokenMessage(null);
+                try {
+                  await saveZaloBotToken(send, botToken);
+                  setHasBotToken(true);
+                  setTokenMessage(t("onboarding.zalo.botTokenSaved"));
+                } catch (caught) {
+                  const message =
+                    caught instanceof Error
+                      ? caught.message
+                      : t("onboarding.zalo.botTokenSaveError");
+                  setTokenMessage(message);
+                } finally {
+                  setSavingToken(false);
+                }
+              }}
+            >
+              {savingToken
+                ? t("onboarding.zalo.botTokenSaving")
+                : t("onboarding.zalo.botTokenSave")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+
+      {hasBotToken ? (
+        <div className="space-y-3 rounded-xl border bg-card/80 p-4">
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-foreground">
+              {t("onboarding.zalo.pairingGuideLabel")}
+            </p>
+            <p className="text-xs text-muted-foreground">
+              {t("onboarding.zalo.pairingGuideHint")}
+            </p>
+          </div>
+
+          <textarea
+            id="zalo-pairing-guide"
+            className="min-h-32 w-full rounded-md border bg-background px-3 py-2 text-sm outline-none ring-offset-background placeholder:text-muted-foreground focus-visible:ring-2 focus-visible:ring-ring"
+            value={pairingGuide}
+            placeholder={t("onboarding.zalo.pairingGuidePlaceholder")}
+            onChange={(event) => {
+              setPairingGuide(event.target.value);
+              setGuideMessage(null);
+            }}
+          />
+
+          {guideMessage ? (
+            <p className="text-sm text-muted-foreground">{guideMessage}</p>
+          ) : null}
+
+          <div>
+            <Button
+              type="button"
+              disabled={!canExecuteGuide}
+              onClick={async () => {
+                setExecutingGuide(true);
+                setGuideMessage(null);
+
+                try {
+                  const result = await executePairingGuide(send, pairingGuide);
+                  setGuideMessage(
+                    `${t("onboarding.zalo.pairingGuideExecuted")} (${result.method})`
+                  );
+                  void checkStatus();
+                } catch (caught) {
+                  const message =
+                    caught instanceof Error
+                      ? caught.message
+                      : t("onboarding.zalo.pairingGuideExecuteError");
+                  setGuideMessage(message);
+                } finally {
+                  setExecutingGuide(false);
+                }
+              }}
+            >
+              {executingGuide
+                ? t("onboarding.zalo.pairingGuideExecuting")
+                : t("onboarding.zalo.pairingGuideExecute")}
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <Separator />
 

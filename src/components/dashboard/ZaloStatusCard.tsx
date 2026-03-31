@@ -12,37 +12,9 @@ import {
 } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
 import { useGateway } from "@/lib/gateway/context";
+import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import { useLocalization } from "@/lib/i18n/context";
 import { loadOnboardingState } from "@/lib/onboarding/storage";
-
-function isZaloConnected(payload: unknown): boolean {
-  if (!payload || typeof payload !== "object") {
-    return false;
-  }
-
-  const data = payload as Record<string, unknown>;
-
-  // channels.status response: payload.channels is a dict keyed by channel id
-  if (data.channels && typeof data.channels === "object" && !Array.isArray(data.channels)) {
-    const channels = data.channels as Record<string, unknown>;
-    const zalo = channels.zalo;
-    if (zalo && typeof zalo === "object") {
-      const entry = zalo as Record<string, unknown>;
-      return entry.running === true;
-    }
-  }
-
-  // channelAccounts fallback
-  if (data.channelAccounts && typeof data.channelAccounts === "object") {
-    const accounts = data.channelAccounts as Record<string, unknown>;
-    const zaloAccounts = Array.isArray(accounts.zalo) ? accounts.zalo : [];
-    return zaloAccounts.some(
-      (a) => a && typeof a === "object" && (a as Record<string, unknown>).running === true
-    );
-  }
-
-  return false;
-}
 
 export function ZaloStatusCard() {
   const { status, send } = useGateway();
@@ -66,12 +38,12 @@ export function ZaloStatusCard() {
     const load = async () => {
       setError(null);
       try {
-        const response = await send("channels.status", {});
+        const response = await send("channels.status", { probe: true });
         if (cancelled) {
           return;
         }
 
-        setConnected(isZaloConnected(response));
+        setConnected(isZaloConnectedFromChannelsStatus(response));
       } catch (caught) {
         if (cancelled) {
           return;

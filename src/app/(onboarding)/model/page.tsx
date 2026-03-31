@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -15,72 +15,40 @@ import { Separator } from "@/components/ui/separator";
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
-import {
-  OPENROUTER_KEY_SAVED_MESSAGE,
-  OPENROUTER_SIGNUP_URL,
-  sanitizeOpenRouterMessage,
-  validateOpenRouterApiKey,
-} from "@/lib/openrouter";
-import { cn } from "@/lib/utils";
-import {
-  findModelOptionByIdentifier,
-  type ModelOption,
-  resolveSelectedModelId,
-} from "./selection";
 import { loadModelStepState, saveModelSelection } from "./config-service";
+import { formatModelOptionLabel, type ModelOption } from "./selection";
 
 export default function OnboardingModelPage() {
   const router = useRouter();
   const { status, send } = useGateway();
-  const { state, setModel, setStep } = useOnboarding();
+  const { setModel, setStep } = useOnboarding();
   const { t } = useLocalization();
 
-  const [models, setModels] = useState<ModelOption[]>([]);
-  const [selectedModel, setSelectedModel] = useState<string>(state.model ?? "");
-  const [openRouterKey, setOpenRouterKey] = useState("");
-  const [showKeyInput, setShowKeyInput] = useState(false);
+  const [modelOptions, setModelOptions] = useState<ModelOption[]>([]);
+  const [selectedModelId, setSelectedModelId] = useState("");
   const [loading, setLoading] = useState(false);
   const [savingSelection, setSavingSelection] = useState(false);
-  const [savingKey, setSavingKey] = useState(false);
   const [configLoaded, setConfigLoaded] = useState(false);
   const [modelError, setModelError] = useState<string | null>(null);
-  const [saveKeyError, setSaveKeyError] = useState<string | null>(null);
-  const [saveKeySuccess, setSaveKeySuccess] = useState<string | null>(null);
+  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
-  const selected = useMemo(
-    () => findModelOptionByIdentifier(models, selectedModel),
-    [models, selectedModel]
-  );
-
-  const loadModels = useCallback(async () => {
+  const loadStepState = useCallback(async () => {
     setLoading(true);
     setModelError(null);
     setConfigLoaded(false);
 
     try {
       const modelState = await loadModelStepState(send);
-      const nextModels = modelState.models;
-      const nextSelectedModel = resolveSelectedModelId({
-        defaultModelId: modelState.selectedModelId,
-        models: nextModels,
-      });
-
-      setModels(nextModels);
-      setSelectedModel(nextSelectedModel);
+      setModelOptions(modelState.modelOptions);
+      setSelectedModelId(modelState.selectedModelId);
+      setSaveSuccess(null);
       setConfigLoaded(true);
-
-      if (nextModels.length === 0) {
-        setModelError(
-          "No models available from gateway. Add an OpenRouter key below, then refresh models."
-        );
-      }
     } catch (caught) {
       const message =
         caught instanceof Error
           ? caught.message
           : "Failed to load model selection state";
-      setModelError(`${message}. Click Retry to try again.`);
-      setModels([]);
+      setModelError(`${message}. Refresh the page and try again.`);
     } finally {
       setLoading(false);
     }
@@ -88,57 +56,49 @@ export default function OnboardingModelPage() {
 
   useEffect(() => {
     if (status === "connected") {
-      void loadModels();
+      void loadStepState();
     }
-  }, [status, loadModels]);
+  }, [status, loadStepState]);
 
-  const canContinue =
-    status === "connected" && selected !== null && !savingSelection && configLoaded;
+  const normalizedModelId = selectedModelId.trim();
+  const hasSelectableModels = modelOptions.length > 0;
 
-  const handleSaveOpenRouterKey = useCallback(async () => {
-    const validationError = validateOpenRouterApiKey(openRouterKey);
+  const canSave =
+    status === "connected" &&
+    !loading &&
+    !savingSelection &&
+    configLoaded &&
+    hasSelectableModels &&
+    normalizedModelId.length > 0;
 
-    if (validationError) {
-      setSaveKeyError(validationError);
-      setSaveKeySuccess(null);
-      return;
-    }
-
-    setSavingKey(true);
-    setSaveKeyError(null);
-    setSaveKeySuccess(null);
+  const persistSelection = useCallback(async () => {
+    const modelToPersist = normalizedModelId;
+    setSavingSelection(true);
+    setModelError(null);
 
     try {
-      const response = await fetch("/api/gateway/openrouter", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ apiKey: openRouterKey.trim() }),
+      const updatedConfig = await saveModelSelection(send, {
+        primaryModel: modelToPersist,
       });
+      const persistedPrimaryModel =
+        updatedConfig.normalized.agents.defaults.model.primary ?? modelToPersist;
 
-      const payload = (await response.json().catch(() => null)) as
-        | { error?: string; message?: string }
-        | null;
+      setSelectedModelId(persistedPrimaryModel);
+      setModel(persistedPrimaryModel);
+      setSaveSuccess(t("onboarding.model.saveSuccess"));
 
-      if (!response.ok) {
-        throw new Error(
-          payload?.error ?? `Failed to save OpenRouter key (${response.status})`
-        );
-      }
-
-      setSaveKeySuccess(payload?.message ?? OPENROUTER_KEY_SAVED_MESSAGE);
-      await loadModels();
+      return persistedPrimaryModel;
     } catch (caught) {
       const message =
         caught instanceof Error
-          ? sanitizeOpenRouterMessage(caught.message, openRouterKey)
-          : "Failed to save OpenRouter key";
-      setSaveKeyError(message);
+          ? caught.message
+          : "Failed to persist selected model configuration";
+      setModelError(`${message}. ${t("onboarding.model.saveFailed")}`);
+      return null;
     } finally {
-      setSavingKey(false);
+      setSavingSelection(false);
     }
-  }, [loadModels, openRouterKey]);
+  }, [normalizedModelId, send, setModel, t]);
 
   return (
     <section className="space-y-5">
@@ -155,114 +115,43 @@ export default function OnboardingModelPage() {
       </header>
 
       <div className="space-y-3 rounded-xl border bg-card/80 p-4">
-        <div className="space-y-2 rounded-xl border border-dashed bg-background/50 p-4">
-          <div className="space-y-1">
-            <h3 className="font-heading text-base font-semibold">{t("onboarding.model.needKey")}</h3>
-            <p className="text-sm text-muted-foreground">
-              {t("onboarding.model.needKeyDesc")}
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-3">
-            <a
-              className={cn(buttonVariants({ variant: "outline" }))}
-              href={OPENROUTER_SIGNUP_URL}
-              rel="noreferrer"
-              target="_blank"
-            >
-              {t("onboarding.model.createAccount")}
-            </a>
-            <Button
-              type="button"
-              variant={showKeyInput ? "secondary" : "outline"}
-              onClick={() => setShowKeyInput((current) => !current)}
-            >
-              {showKeyInput ? t("onboarding.model.hideKeyForm") : t("onboarding.model.haveKey")}
-            </Button>
-          </div>
-
-          {showKeyInput ? (
-            <div className="space-y-3 rounded-lg border bg-muted/20 p-4">
-              <label
-                className="text-sm text-muted-foreground"
-                htmlFor="openrouter-api-key"
-              >
-                {t("onboarding.model.keyLabel")}
-              </label>
-              <input
-                id="openrouter-api-key"
-                type="password"
-                value={openRouterKey}
-                onChange={(event) => {
-                  setOpenRouterKey(event.target.value);
-                  if (saveKeyError) {
-                    setSaveKeyError(null);
-                  }
-                }}
-                placeholder="sk-or-v1-..."
-                className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
-              />
-              <p className="text-xs text-muted-foreground">
-                {t("onboarding.model.keyHint")}
-              </p>
-
-              {saveKeySuccess ? (
-                <p className="text-sm text-emerald-600">{saveKeySuccess}</p>
-              ) : null}
-
-              {saveKeyError ? (
-                <p className="text-sm text-destructive">{saveKeyError}</p>
-              ) : null}
-
-              <div className="flex flex-wrap gap-3">
-                <Button
-                  type="button"
-                  disabled={savingKey}
-                  onClick={() => void handleSaveOpenRouterKey()}
-                >
-                  {savingKey ? t("onboarding.model.savingKey") : t("onboarding.model.saveKey")}
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  disabled={loading || status !== "connected"}
-                  onClick={() => void loadModels()}
-                >
-                  {loading ? t("onboarding.model.refreshing") : t("onboarding.model.refreshModels")}
-                </Button>
-              </div>
-            </div>
-          ) : null}
+        <div className="space-y-2">
+          <label className="text-sm text-muted-foreground" htmlFor="primary-model-select">
+            {t("onboarding.model.selectedModel")}
+          </label>
+          <Select
+            value={selectedModelId}
+            disabled={loading || !hasSelectableModels || status !== "connected"}
+            onValueChange={(value) => {
+              setSelectedModelId(value ?? "");
+              setModelError(null);
+              setSaveSuccess(null);
+            }}
+          >
+            <SelectTrigger id="primary-model-select" className="w-full">
+              <SelectValue placeholder={t("onboarding.model.selectModel")} />
+            </SelectTrigger>
+            <SelectContent>
+              {modelOptions.map((model) => (
+                <SelectItem key={model.id} value={model.id}>
+                  {formatModelOptionLabel(model)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <label className="text-sm text-muted-foreground" htmlFor="model-select">
-          {t("onboarding.model.availableModels")}
-        </label>
-        <Select
-          value={selectedModel}
-          onValueChange={(value) => {
-            setSelectedModel(value ?? "");
-          }}
-        >
-          <SelectTrigger id="model-select" className="w-full">
-            <SelectValue
-              placeholder={loading ? t("onboarding.model.loadingModels") : t("onboarding.model.selectModel")}
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {models.map((model) => (
-              <SelectItem key={model.id} value={model.id}>
-                {model.name} ({model.provider})
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <p className="text-xs text-muted-foreground">{t("onboarding.model.modelNameHint")}</p>
 
-        {selected ? (
-          <p className="text-sm text-muted-foreground">
-            {t("onboarding.model.selected")}: <strong>{selected.name}</strong> {t("onboarding.model.by")} {selected.provider}
-          </p>
+        {loading ? (
+          <p className="text-sm text-muted-foreground">{t("onboarding.model.refreshing")}</p>
         ) : null}
+
+        {!loading && configLoaded && !hasSelectableModels && !modelError ? (
+          <p className="text-sm text-muted-foreground">{t("onboarding.model.emptyState")}</p>
+        ) : null}
+
+        {saveSuccess ? <p className="text-sm text-emerald-600">{saveSuccess}</p> : null}
 
         {modelError ? <p className="text-sm text-destructive">{modelError}</p> : null}
       </div>
@@ -273,35 +162,23 @@ export default function OnboardingModelPage() {
         <Button
           type="button"
           variant="outline"
-          disabled={loading || status !== "connected"}
-          onClick={() => void loadModels()}
+          disabled={!canSave}
+          onClick={() => void persistSelection()}
         >
-          {loading ? t("onboarding.model.refreshing") : t("onboarding.model.retry")}
+          {savingSelection ? t("onboarding.model.saving") : t("common.save")}
         </Button>
+
         <Button
           type="button"
-          disabled={!canContinue}
+          disabled={!canSave}
           onClick={async () => {
-            const modelToPersist = selected?.id ?? selectedModel.trim();
-            setSavingSelection(true);
-            setModelError(null);
-            try {
-              await saveModelSelection(send, {
-                modelId: modelToPersist,
-                provider: selected?.provider ?? "",
-              });
-              setModel(modelToPersist);
-              setStep("zalo");
-              router.push("/zalo");
-            } catch (caught) {
-              const message =
-                caught instanceof Error
-                  ? caught.message
-                  : "Failed to persist selected model configuration";
-              setModelError(`${message}. Click Retry and try again.`);
-            } finally {
-              setSavingSelection(false);
+            const persistedPrimaryModel = await persistSelection();
+            if (!persistedPrimaryModel) {
+              return;
             }
+
+            setStep("zalo");
+            router.push("/zalo");
           }}
         >
           {savingSelection ? t("onboarding.model.saving") : t("common.next")}

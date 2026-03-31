@@ -1,3 +1,7 @@
+import {
+  normalizeModelIdentifier as extractModelIdFromReference,
+  toPrimaryModelReference,
+} from "@/lib/gateway/config";
 import type { JsonValue } from "@/lib/gateway/types";
 
 export type ModelOption = {
@@ -21,7 +25,7 @@ export type SendFn = (
   params?: JsonValue
 ) => Promise<JsonValue>;
 
-function isObject(value: unknown): value is Record<string, unknown> {
+export function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
@@ -38,16 +42,45 @@ function readStringField(
   return normalized.length > 0 ? normalized : null;
 }
 
+export function extractProviderFromReference(reference: string): string {
+  const normalized = reference.trim();
+  if (!normalized) {
+    return "unknown";
+  }
+
+  const separator = normalized.indexOf("/");
+  return separator > 0 ? normalized.slice(0, separator) : "unknown";
+}
+
+export function extractModelNameFromReference(reference: string): string {
+  return extractModelIdFromReference(reference) ?? reference.trim();
+}
+
+function buildFallbackModelOption(primaryModelId: string): ModelOption {
+  return {
+    id: primaryModelId.trim(),
+    name: extractModelNameFromReference(primaryModelId),
+    provider: extractProviderFromReference(primaryModelId),
+  };
+}
+
 function normalizeSessionModel(item: Record<string, unknown>): ModelOption | null {
-  const id = readStringField(item, "model") ?? readStringField(item, "id");
-  if (!id) {
+  const model = readStringField(item, "model") ?? readStringField(item, "id");
+  if (!model) {
     return null;
   }
 
+  const provider =
+    readStringField(item, "modelProvider") ??
+    readStringField(item, "provider") ??
+    extractProviderFromReference(model);
+  const id =
+    provider === "unknown" ? model : toPrimaryModelReference(model, provider);
+
   return {
     id,
-    name: readStringField(item, "name") ?? id,
-    provider: readStringField(item, "modelProvider") ?? readStringField(item, "provider") ?? "unknown",
+    name: readStringField(item, "name") ?? extractModelNameFromReference(id),
+    provider,
   };
 }
 
@@ -65,7 +98,13 @@ export function extractDefaultSessionModelId(payload: unknown): string | null {
     return null;
   }
 
-  return readStringField(source.defaults, "model");
+  const model = readStringField(source.defaults, "model");
+  if (!model) {
+    return null;
+  }
+
+  const provider = readStringField(source.defaults, "modelProvider");
+  return provider ? toPrimaryModelReference(model, provider) : model;
 }
 
 export function extractSessionModelList(payload: unknown): ModelOption[] {
@@ -92,15 +131,13 @@ export function mergeSessionModels(
   defaultModelId: string | null,
   models: ModelOption[]
 ): ModelOption[] {
+  const defaultModel = defaultModelId
+    ? findModelOptionByIdentifier(models, defaultModelId) ??
+      buildFallbackModelOption(defaultModelId)
+    : null;
+
   const merged = [
-    defaultModelId
-      ? {
-          id: defaultModelId,
-          name: defaultModelId,
-          provider:
-            findModelOptionByIdentifier(models, defaultModelId)?.provider ?? "unknown",
-        }
-      : null,
+    defaultModel,
     ...models,
   ].filter((item): item is ModelOption => item !== null);
 
@@ -157,6 +194,12 @@ export function findModelOptionByIdentifier(
       (model) => normalizeModelIdentifier(model.id) === normalizedModelId
     ) ?? null
   );
+}
+
+export function formatModelOptionLabel(model: ModelOption): string {
+  return model.provider === "unknown"
+    ? model.name
+    : `${model.name} (${model.provider})`;
 }
 
 export function resolveSelectedModelId({

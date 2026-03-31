@@ -5,6 +5,7 @@ import {
   createGatewayConfigService,
   normalizeGatewayConfig,
   normalizeModelIdentifier,
+  sanitizeGatewayConfigForSave,
   serializeConfigPatch,
   toPrimaryModelReference,
 } from "@/lib/gateway/config";
@@ -59,6 +60,10 @@ describe("gateway config service", () => {
     expect(normalized.normalized.agents.defaults.model.primary).toBe(
       "litellm/openclaw-smart-router"
     );
+    expect(normalized.normalized.agents.defaults.model.provider).toBeNull();
+    expect(normalized.normalized.agents.defaults.model.id).toBe(
+      "openclaw-smart-router"
+    );
     expect((normalized.normalized.source.hooks as { internal?: { enabled?: boolean } })?.internal?.enabled).toBe(true);
   });
 
@@ -68,6 +73,8 @@ describe("gateway config service", () => {
     expect(normalized.exists).toBe(false);
     expect(normalized.normalized.models.mode).toBe("merge");
     expect(normalized.normalized.agents.defaults.model.primary).toBeNull();
+    expect(normalized.normalized.agents.defaults.model.provider).toBeNull();
+    expect(normalized.normalized.agents.defaults.model.id).toBeNull();
     expect(normalized.normalized.gateway.mode).toBe("local");
     expect(normalized.normalized.gateway.bind).toBe("lan");
     expect(normalized.normalized.channels).toEqual({});
@@ -97,6 +104,8 @@ describe("gateway config service", () => {
             defaults: {
               model: {
                 primary: "litellm/openclaw-smart-router",
+                provider: "litellm",
+                id: "openclaw-smart-router",
               },
               maxConcurrent: 4,
               subagents: {
@@ -126,6 +135,10 @@ describe("gateway config service", () => {
     expect(normalized.normalized.wizard.lastRunCommand).toBe("onboard");
     expect(normalized.normalized.agents.defaults.maxConcurrent).toBe(4);
     expect(normalized.normalized.agents.defaults.subagentsMaxConcurrent).toBe(8);
+    expect(normalized.normalized.agents.defaults.model.provider).toBe("litellm");
+    expect(normalized.normalized.agents.defaults.model.id).toBe(
+      "openclaw-smart-router"
+    );
     expect(normalized.normalized.messages.ackReactionScope).toBe(
       "group-mentions"
     );
@@ -185,6 +198,35 @@ describe("gateway config service", () => {
     ).toBeUndefined();
   });
 
+  it("sets empty-string baseUrl for non-litellm providers and removes nullish values before save", () => {
+    const sanitized = sanitizeGatewayConfigForSave({
+      models: {
+        providers: {
+          google: {
+            baseUrl: undefined,
+            apiKey: "sk-google",
+            auth: "api-key",
+            api: "openai-completions",
+            optional: null,
+          },
+          litellm: {
+            baseUrl: " http://host.docker.internal:4000/ ",
+            apiKey: "sk-litellm",
+          },
+        },
+      },
+    });
+
+    const providers = ((sanitized.models as Record<string, unknown>).providers as Record<
+      string,
+      Record<string, unknown>
+    >);
+
+    expect(providers.google.baseUrl).toBe("");
+    expect(providers.google.optional).toBeUndefined();
+    expect(providers.litellm.baseUrl).toBe("http://host.docker.internal:4000/");
+  });
+
   it("serializes patch operations to deterministic dot-path payload", () => {
     const patch = serializeConfigPatch([
       { op: "set", path: "a.b", value: "x" },
@@ -231,8 +273,7 @@ describe("gateway config service", () => {
 
       if (method === "config.set") {
         const input = params as Record<string, unknown>;
-        expect(input.patch).toBeDefined();
-        expect(input.config).toBeDefined();
+        expect(input.raw).toBeDefined();
         return { ok: true } as JsonValue;
       }
 
@@ -252,8 +293,7 @@ describe("gateway config service", () => {
     expect(send).toHaveBeenCalledWith(
       "config.set",
       expect.objectContaining({
-        patch: expect.any(Object),
-        config: expect.any(Object),
+        raw: expect.any(String),
       })
     );
     expect(updated.normalized.agents.defaults.model.primary).toBe(
