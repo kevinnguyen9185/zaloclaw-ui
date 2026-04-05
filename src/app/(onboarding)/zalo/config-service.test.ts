@@ -114,6 +114,77 @@ describe("zalo config service", () => {
     expect(result.normalized.channels).toBeTruthy();
   });
 
+  it("defaults dmPolicy to pairing when missing while saving token", async () => {
+    const initialWithoutPolicy = {
+      ...CONFIG_GET_PAYLOAD,
+      parsed: {
+        channels: {
+          zalo: {
+            enabled: true,
+            accounts: {
+              default: {
+                botToken: "old-token",
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const updatedPayload = {
+      ...initialWithoutPolicy,
+      parsed: {
+        channels: {
+          zalo: {
+            enabled: true,
+            accounts: {
+              default: {
+                dmPolicy: "pairing",
+                botToken: "new-token",
+              },
+            },
+          },
+        },
+      },
+    };
+
+    const send = vi.fn(async (method: string, params?: JsonValue) => {
+      if (method === "config.get") {
+        if (!send.mock.calls.some(([called]) => called === "config.set")) {
+          return initialWithoutPolicy as unknown as JsonValue;
+        }
+
+        return updatedPayload as unknown as JsonValue;
+      }
+
+      if (method === "config.set") {
+        return { ok: true, received: params } as JsonValue;
+      }
+
+      throw new Error(`Unexpected method: ${method}`);
+    });
+
+    await saveZaloBotToken(send, "new-token");
+
+    const configSetCall = send.mock.calls.find(([method]) => method === "config.set");
+    const params = (configSetCall?.[1] ?? {}) as { raw?: string };
+    const parsed = JSON.parse(params.raw ?? "{}") as {
+      channels?: {
+        zalo?: {
+          accounts?: {
+            default?: {
+              dmPolicy?: string;
+              botToken?: string;
+            };
+          };
+        };
+      };
+    };
+
+    expect(parsed.channels?.zalo?.accounts?.default?.dmPolicy).toBe("pairing");
+    expect(parsed.channels?.zalo?.accounts?.default?.botToken).toBe("new-token");
+  });
+
   it("forwards full pairing guide message via agent and waits for completion", async () => {
     const fullMessage = [
       "OpenClaw: access not configured.",
@@ -125,12 +196,17 @@ describe("zalo config service", () => {
       "Ask the bot owner to approve with:",
       "openclaw pairing approve zalo ENZMB3K8",
     ].join("\n");
+    const expectedMessage = [
+      "Use this message below to pair Zalo bot account",
+      "",
+      fullMessage,
+    ].join("\n");
 
     const send = vi.fn(async (method: string, params?: JsonValue) => {
       if (method === "agent") {
         const payload = params as Record<string, unknown>;
         expect(typeof payload.idempotencyKey).toBe("string");
-        expect(payload.message).toBe(fullMessage);
+        expect(payload.message).toBe(expectedMessage);
         expect(payload.agentId).toBe("main");
         return { runId: "run-123", status: "accepted" } as JsonValue;
       }
@@ -147,7 +223,7 @@ describe("zalo config service", () => {
 
     const result = await executePairingGuide(send, fullMessage);
 
-    expect(result.message).toBe(fullMessage);
+  expect(result.message).toBe(expectedMessage);
     expect(result.method).toBe("agent");
     expect(result.runId).toBe("run-123");
     expect(result.waitStatus).toBe("ok");
@@ -155,7 +231,7 @@ describe("zalo config service", () => {
     expect(send).toHaveBeenNthCalledWith(
       1,
       "agent",
-      expect.objectContaining({ message: fullMessage, idempotencyKey: expect.any(String), agentId: "main" })
+      expect.objectContaining({ message: expectedMessage, idempotencyKey: expect.any(String), agentId: "main" })
     );
     expect(send).toHaveBeenNthCalledWith(2, "agent.wait", {
       runId: "run-123",

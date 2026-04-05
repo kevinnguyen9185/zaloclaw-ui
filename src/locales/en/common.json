@@ -11,5 +11,14 @@
   "notConnected": "Not connected",
   "gateway": "Gateway",
   "connecting": "Connecting",
-  "disconnected": "Disconnected"
+  "disconnected": "Disconnected",
+  "checking": "Checking…",
+  "unknown": "Unknown",
+  "checkNow": "Check Now",
+  "openclaw": "OpenClaw",
+  "zalo": "Zalo",
+  "dismiss": "Dismiss",
+  "reconfigure": "Reconfigure",
+  "recoveryTitle": "Service Disconnected",
+  "recoveryDescription": "{service} appears to be disconnected. Choose an action to restore the connection."
 }

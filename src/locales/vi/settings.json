@@ -20,5 +20,9 @@
   "config.gatewayBind": "Gateway bind",
   "config.notSet": "Chưa đặt",
   "config.unknown": "Không rõ",
-  "config.error": "Không thể tải tóm tắt cấu hình gateway"
+  "config.error": "Không thể tải tóm tắt cấu hình gateway",
+  "connectionStatus.title": "Trạng thái kết nối",
+  "connectionStatus.description": "Trạng thái trực tiếp của các dịch vụ OpenClaw và Zalo.",
+  "connectionStatus.lastChecked": "Kiểm tra lần cuối",
+  "connectionStatus.testButton": "Kiểm tra kết nối"
 }

@@ -20,5 +20,9 @@
   "config.gatewayBind": "Gateway bind",
   "config.notSet": "Not set",
   "config.unknown": "Unknown",
-  "config.error": "Failed to load gateway configuration summary"
+  "config.error": "Failed to load gateway configuration summary",
+  "connectionStatus.title": "Connection Status",
+  "connectionStatus.description": "Live status of OpenClaw and Zalo services.",
+  "connectionStatus.lastChecked": "Last checked",
+  "connectionStatus.testButton": "Test Connection"
 }

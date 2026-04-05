@@ -6,12 +6,13 @@ import { useRouter } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { runOpenclawCommand } from "@/lib/gateway/openclaw-command-service";
 import { useGateway } from "@/lib/gateway/context";
 import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
 import {
-  executePairingGuide,
+  buildPairingApproveCommandFromGuide,
   loadZaloConfigState,
   saveZaloBotToken,
 } from "./config-service";
@@ -32,6 +33,8 @@ export default function OnboardingZaloPage() {
   const [pairingGuide, setPairingGuide] = useState("");
   const [executingGuide, setExecutingGuide] = useState(false);
   const [guideMessage, setGuideMessage] = useState<string | null>(null);
+  const [guideMessageTone, setGuideMessageTone] = useState<"success" | "error" | null>(null);
+  const [pairingDone, setPairingDone] = useState(false);
 
   const checkStatus = useCallback(async () => {
     if (status !== "connected") {
@@ -140,7 +143,15 @@ export default function OnboardingZaloPage() {
               {t("onboarding.zalo.botTokenLabel")}
             </p>
             <p className="text-xs text-muted-foreground">
-              {t("onboarding.zalo.botTokenHint")}
+              {t("onboarding.zalo.botTokenHint")}{" "}
+              <a
+                href="https://bot.zapps.me/docs/create-bot/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                {t("onboarding.zalo.botTokenHintLink")}
+              </a>
             </p>
           </div>
 
@@ -199,6 +210,11 @@ export default function OnboardingZaloPage() {
             <p className="text-xs text-muted-foreground">
               {t("onboarding.zalo.pairingGuideHint")}
             </p>
+            {pairingDone ? (
+              <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+                {t("onboarding.zalo.pairingGuideDone")}
+              </p>
+            ) : null}
           </div>
 
           <textarea
@@ -209,11 +225,23 @@ export default function OnboardingZaloPage() {
             onChange={(event) => {
               setPairingGuide(event.target.value);
               setGuideMessage(null);
+              setGuideMessageTone(null);
+              setPairingDone(false);
             }}
           />
 
           {guideMessage ? (
-            <p className="text-sm text-muted-foreground">{guideMessage}</p>
+            <p
+              className={`text-sm ${
+                guideMessageTone === "success"
+                  ? "text-emerald-600 dark:text-emerald-400"
+                  : guideMessageTone === "error"
+                    ? "text-destructive"
+                    : "text-muted-foreground"
+              }`}
+            >
+              {guideMessage}
+            </p>
           ) : null}
 
           <div>
@@ -223,12 +251,23 @@ export default function OnboardingZaloPage() {
               onClick={async () => {
                 setExecutingGuide(true);
                 setGuideMessage(null);
+                setGuideMessageTone(null);
 
                 try {
-                  const result = await executePairingGuide(send, pairingGuide);
-                  setGuideMessage(
-                    `${t("onboarding.zalo.pairingGuideExecuted")} (${result.method})`
-                  );
+                  const command = buildPairingApproveCommandFromGuide(pairingGuide);
+                  const result = await runOpenclawCommand(command);
+                  if (result.ok) {
+                    setPairingDone(true);
+                    setConnected(true);
+                    setGuideMessage(t("onboarding.zalo.pairingGuideSuccess"));
+                    setGuideMessageTone("success");
+                  } else {
+                    setPairingDone(false);
+                    setGuideMessage(
+                      `${t("onboarding.zalo.pairingGuideExecuteError")} (${result.stderr || `exit ${result.exitCode ?? "unknown"}`})`
+                    );
+                    setGuideMessageTone("error");
+                  }
                   void checkStatus();
                 } catch (caught) {
                   const message =
@@ -236,6 +275,7 @@ export default function OnboardingZaloPage() {
                       ? caught.message
                       : t("onboarding.zalo.pairingGuideExecuteError");
                   setGuideMessage(message);
+                  setGuideMessageTone("error");
                 } finally {
                   setExecutingGuide(false);
                 }

@@ -1,6 +1,7 @@
 "use client";
 
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
 
 import {
@@ -10,13 +11,21 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { RecoveryDialog } from "@/components/status/RecoveryDialog";
+import { StatusBar } from "@/components/status/StatusBar";
 import { StepProgress } from "@/components/onboarding/StepProgress";
 import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
+import { useConnectionStatus } from "@/lib/status/context";
 
 export function OnboardingShell({ children }: { children: ReactNode }) {
   const { state } = useOnboarding();
   const { t } = useLocalization();
+  const { recoveryService, dismissRecovery, checkNow } = useConnectionStatus();
+  const pathname = usePathname();
+
+  // Don't block the Zalo setup page with a Zalo recovery dialog — the user is already there.
+  const visibleRecovery = recoveryService === "zalo" && pathname === "/zalo" ? null : recoveryService;
 
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#0a0e1a] px-4 py-12">
@@ -40,10 +49,16 @@ export function OnboardingShell({ children }: { children: ReactNode }) {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          <StatusBar />
           <StepProgress step={state.step} />
           <div>{children}</div>
         </CardContent>
       </Card>
+      <RecoveryDialog
+        service={visibleRecovery}
+        onDismiss={dismissRecovery}
+        onRetry={checkNow}
+      />
     </div>
   );
 }

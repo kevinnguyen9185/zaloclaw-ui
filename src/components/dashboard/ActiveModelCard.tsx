@@ -2,16 +2,11 @@
 
 import { useEffect, useState } from "react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { createGatewayConfigService } from "@/lib/gateway/config";
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
+import { useConnectionStatus } from "@/lib/status/context";
 
 type ModelInfo = {
   name: string;
@@ -38,9 +33,11 @@ function extractModel(reference: string | null): ModelInfo | null {
 export function ActiveModelCard() {
   const { status, send } = useGateway();
   const { t } = useLocalization();
+  const { snapshot } = useConnectionStatus();
   const [model, setModel] = useState<ModelInfo | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const openclawDisconnected = snapshot.openclaw.state === "disconnected";
   useEffect(() => {
     if (status !== "connected") {
       return;
@@ -77,24 +74,26 @@ export function ActiveModelCard() {
   }, [send, status, t]);
 
   return (
-    <Card className="animate-card-enter-1">
-      <CardHeader className="pb-2">
-        <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {t("dashboard.activeModel.label")}
-        </CardDescription>
-        <CardTitle className="text-xl">
-          {error ? (
-            <span className="text-destructive text-base font-normal">{error}</span>
-          ) : model ? (
-            model.name
-          ) : (
-            <span className="text-muted-foreground text-base font-normal">{t("dashboard.activeModel.empty")}</span>
-          )}
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {model && !error && (
-          <span className="inline-flex items-center rounded-full bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
+    <Card className={["animate-card-enter-1", openclawDisconnected ? "opacity-60" : ""].join(" ").trim()}>
+      <CardContent className="flex items-center justify-between gap-3 py-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("dashboard.activeModel.label")}
+          </p>
+          <p className="mt-0.5 truncate text-sm font-semibold leading-tight">
+            {openclawDisconnected ? (
+              <span className="text-muted-foreground font-normal" title={t("common.disconnected")}>{t("dashboard.activeModel.unavailable")}</span>
+            ) : error ? (
+              <span className="text-destructive font-normal">{error}</span>
+            ) : model ? (
+              model.name
+            ) : (
+              <span className="text-muted-foreground font-normal">{t("dashboard.activeModel.empty")}</span>
+            )}
+          </p>
+        </div>
+        {model && !error && !openclawDisconnected && (
+          <span className="shrink-0 inline-flex items-center rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
             {model.provider}
           </span>
         )}

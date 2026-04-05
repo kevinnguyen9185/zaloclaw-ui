@@ -3,6 +3,7 @@ import { Be_Vietnam_Pro, Geist_Mono, Lexend } from "next/font/google";
 import "./globals.css";
 import { GatewayProvider } from "@/lib/gateway/context";
 import { LocalizationProvider } from "@/lib/i18n/context";
+import { ConnectionStatusProvider } from "@/lib/status/context";
 import { ThemeProvider } from "@/lib/theme/context";
 import { getThemeBootstrapScript } from "@/lib/theme/engine";
 
@@ -46,7 +47,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <LocalizationProvider>
           <GatewayProvider>
-            <ThemeProvider>{children}</ThemeProvider>
+            <ConnectionStatusProvider>
+              <ThemeProvider>{children}</ThemeProvider>
+            </ConnectionStatusProvider>
           </GatewayProvider>
         </LocalizationProvider>
       </body>

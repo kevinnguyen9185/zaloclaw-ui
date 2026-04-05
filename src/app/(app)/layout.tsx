@@ -7,10 +7,16 @@ import { useEffect, useState, type ReactNode } from "react";
 import { MoonIcon, SunIcon } from "lucide-react";
 
 import { GatewayStatusBadge } from "@/components/dashboard/GatewayStatusBadge";
+import { RecoveryDialog } from "@/components/status/RecoveryDialog";
+import { StatusBar } from "@/components/status/StatusBar";
 import { Button } from "@/components/ui/button";
+import { DashboardChatProvider, useDashboardChat } from "@/lib/dashboard/chat";
+import { getDashboardRouteFromPath } from "@/lib/dashboard/chat-events";
 import { useLocalization } from "@/lib/i18n/context";
 import { loadOnboardingState } from "@/lib/onboarding/storage";
+import { useConnectionStatus } from "@/lib/status/context";
 import { useTheme } from "@/lib/theme/context";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/dashboard", labelKey: "dashboard.nav.dashboard" },
@@ -29,11 +35,24 @@ const PAGE_TITLES: Record<string, { titleKey: string; subKey: string }> = {
 };
 
 export default function AppLayout({ children }: { children: ReactNode }) {
+  return (
+    <DashboardChatProvider>
+      <DashboardShell>{children}</DashboardShell>
+    </DashboardChatProvider>
+  );
+}
+
+function DashboardShell({ children }: { children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   const [ready, setReady] = useState(false);
   const { resolvedMode, toggleMode } = useTheme();
   const { t } = useLocalization();
+  const {
+    layoutMode,
+    publishEvent,
+  } = useDashboardChat();
+  const { recoveryService, dismissRecovery, checkNow } = useConnectionStatus();
 
   useEffect(() => {
     const state = loadOnboardingState();
@@ -52,6 +71,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     titleKey: "dashboard.page.dashboard.title",
     subKey: "",
   };
+  const isChatFocused = layoutMode === "chat-focused";
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -107,7 +127,14 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               size="icon-sm"
               variant="outline"
               aria-label={t("settings.theme.mode")}
-              onClick={toggleMode}
+              onClick={() => {
+                toggleMode();
+                publishEvent({
+                  type: "action-triggered",
+                  route: getDashboardRouteFromPath(pathname) ?? "dashboard",
+                  action: "theme.toggle",
+                });
+              }}
             >
               {resolvedMode === "dark" ? (
                 <MoonIcon className="h-4 w-4" />
@@ -116,10 +143,26 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               )}
             </Button>
             <GatewayStatusBadge />
+            <StatusBar />
           </div>
         </header>
-        <div className="flex-1 bg-muted/30 p-6">{children}</div>
+        <div className="flex-1 bg-muted/30 p-4 sm:p-6">
+          <div
+            className={cn(
+              "grid items-start gap-4",
+              "xl:grid-cols-[minmax(0,1fr)]",
+              isChatFocused ? "xl:grid-cols-[minmax(0,1fr)]" : ""
+            )}
+          >
+            <div>{children}</div>
+          </div>
+        </div>
       </main>
+      <RecoveryDialog
+        service={recoveryService}
+        onDismiss={dismissRecovery}
+        onRetry={checkNow}
+      />
     </div>
   );
 }

@@ -3,86 +3,51 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { buttonVariants } from "@/components/ui/button";
-import { useGateway } from "@/lib/gateway/context";
-import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import { useLocalization } from "@/lib/i18n/context";
 import { loadOnboardingState } from "@/lib/onboarding/storage";
+import { useConnectionStatus } from "@/lib/status/context";
 
 export function ZaloStatusCard() {
-  const { status, send } = useGateway();
   const { t } = useLocalization();
-  const [connected, setConnected] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [skipped, setSkipped] = useState(false);
+  const { snapshot } = useConnectionStatus();
 
   useEffect(() => {
     const state = loadOnboardingState();
     setSkipped(state.zalo === "skipped");
   }, []);
 
-  useEffect(() => {
-    if (status !== "connected") {
-      return;
-    }
-
-    let cancelled = false;
-
-    const load = async () => {
-      setError(null);
-      try {
-        const response = await send("channels.status", { probe: true });
-        if (cancelled) {
-          return;
-        }
-
-        setConnected(isZaloConnectedFromChannelsStatus(response));
-      } catch (caught) {
-        if (cancelled) {
-          return;
-        }
-
-        const message =
-          caught instanceof Error
-            ? caught.message
-            : t("dashboard.zalo.error");
-        setError(message);
-      }
-    };
-
-    void load();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [send, status, t]);
+  const zaloStatus = snapshot.zalo;
+  const connected = zaloStatus.state === "connected";
+  const isDisconnected = zaloStatus.state === "disconnected";
 
   return (
     <Card className="animate-card-enter-2">
-      <CardHeader className="pb-2">
-        <CardDescription className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-          {t("dashboard.zalo.label")}
-        </CardDescription>
-        <CardTitle className="flex items-center gap-2 text-xl">
-          <span
-            className={[
-              "inline-block h-2 w-2 rounded-full",
-              connected ? "bg-emerald-500" : "bg-muted-foreground/40",
-            ].join(" ")}
-            aria-hidden="true"
-          />
-          {connected ? t("common.connected") : t("dashboard.zalo.notPaired")}
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      <CardContent className="flex items-center justify-between gap-3 py-3">
+        <div className="min-w-0">
+          <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+            {t("dashboard.zalo.label")}
+          </p>
+          <p className="mt-0.5 flex items-center gap-1.5 text-sm font-semibold leading-tight">
+            <span
+              className={[
+                "inline-block h-2 w-2 shrink-0 rounded-full",
+                connected
+                  ? "bg-emerald-500"
+                  : isDisconnected
+                    ? "bg-rose-500"
+                    : "bg-muted-foreground/40",
+              ].join(" ")}
+              aria-hidden="true"
+            />
+            {connected ? t("common.connected") : t("dashboard.zalo.notPaired")}
+          </p>
+          {zaloStatus.error ? (
+            <p className="mt-1 text-xs text-destructive">{zaloStatus.error}</p>
+          ) : null}
+        </div>
         {!connected && skipped && (
           <Link
             href="/zalo"

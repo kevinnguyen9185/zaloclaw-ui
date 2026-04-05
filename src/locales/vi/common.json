@@ -11,5 +11,14 @@
   "notConnected": "Chưa kết nối",
   "gateway": "Gateway",
   "connecting": "Đang kết nối",
-  "disconnected": "Đã ngắt kết nối"
+  "disconnected": "Đã ngắt kết nối",
+  "checking": "Đang kiểm tra…",
+  "unknown": "Không rõ",
+  "checkNow": "Kiểm tra ngay",
+  "openclaw": "OpenClaw",
+  "zalo": "Zalo",
+  "dismiss": "Bỏ qua",
+  "reconfigure": "Cấu hình lại",
+  "recoveryTitle": "Dịch vụ bị ngắt kết nối",
+  "recoveryDescription": "{service} có vẻ bị ngắt kết nối. Chọn một hành động để khôi phục kết nối."
 }

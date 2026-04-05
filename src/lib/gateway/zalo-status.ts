@@ -22,7 +22,8 @@ function isAccountAlive(account: Record<string, unknown>): boolean {
     return probeOk;
   }
 
-  return running || connected;
+  // Without probe evidence, require both flags to reduce false positives.
+  return running && connected;
 }
 
 export function isZaloConnectedFromChannelsStatus(payload: JsonValue): boolean {
@@ -56,5 +57,6 @@ export function isZaloConnectedFromChannelsStatus(payload: JsonValue): boolean {
     return configured && probe.ok === true;
   }
 
-  return configured && (running || connected);
+  // Without probe evidence, require both flags to reduce false positives.
+  return configured && running && connected;
 }

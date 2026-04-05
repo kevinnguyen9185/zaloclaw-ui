@@ -25,6 +25,28 @@ interface GatewayContextValue {
     event: string,
     handler: (payload: JsonValue | undefined) => void
   ) => () => void;
+  checkOpenclawStatus: () => Promise<{
+    connected: boolean;
+    error: string | null;
+    checkedAt: number;
+  }>;
+  checkZaloStatus: () => Promise<{
+    connected: boolean;
+    error: string | null;
+    checkedAt: number;
+  }>;
+  getServiceStatus: () => {
+    openclaw: {
+      connected: boolean;
+      error: string | null;
+      checkedAt: number;
+    } | null;
+    zalo: {
+      connected: boolean;
+      error: string | null;
+      checkedAt: number;
+    } | null;
+  };
 }
 
 const GatewayContext = createContext<GatewayContextValue | null>(null);
@@ -82,14 +104,57 @@ export function GatewayProvider({ children }: { children: ReactNode }) {
     []
   );
 
+  const checkOpenclawStatus = useCallback(() => {
+    if (!clientRef.current) {
+      return Promise.resolve({
+        connected: false,
+        error: "Gateway client is unavailable",
+        checkedAt: Date.now(),
+      });
+    }
+
+    return clientRef.current.checkOpenclawStatus();
+  }, []);
+
+  const checkZaloStatus = useCallback(() => {
+    if (!clientRef.current) {
+      return Promise.resolve({
+        connected: false,
+        error: "Gateway client is unavailable",
+        checkedAt: Date.now(),
+      });
+    }
+
+    return clientRef.current.checkZaloStatus();
+  }, []);
+
+  const getServiceStatus = useCallback(() => {
+    if (!clientRef.current) {
+      return { openclaw: null, zalo: null };
+    }
+
+    return clientRef.current.getServiceStatus();
+  }, []);
+
   const value = useMemo(
     () => ({
       status,
       error,
       send,
       subscribe,
+      checkOpenclawStatus,
+      checkZaloStatus,
+      getServiceStatus,
     }),
-    [status, error, send, subscribe]
+    [
+      status,
+      error,
+      send,
+      subscribe,
+      checkOpenclawStatus,
+      checkZaloStatus,
+      getServiceStatus,
+    ]
   );
 
   return (

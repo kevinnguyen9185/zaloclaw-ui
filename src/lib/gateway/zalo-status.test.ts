@@ -44,7 +44,7 @@ describe("isZaloConnectedFromChannelsStatus", () => {
     expect(isZaloConnectedFromChannelsStatus(payload)).toBe(true);
   });
 
-  it("falls back to running/connected only when probe is missing", () => {
+  it("does not mark connected when probe is missing and only one flag is true", () => {
     const payload = {
       channelAccounts: {
         zalo: [
@@ -53,6 +53,24 @@ describe("isZaloConnectedFromChannelsStatus", () => {
             enabled: true,
             configured: true,
             running: true,
+          },
+        ],
+      },
+    };
+
+    expect(isZaloConnectedFromChannelsStatus(payload)).toBe(false);
+  });
+
+  it("falls back to connected only when probe is missing and both flags are true", () => {
+    const payload = {
+      channelAccounts: {
+        zalo: [
+          {
+            accountId: "default",
+            enabled: true,
+            configured: true,
+            running: true,
+            connected: true,
           },
         ],
       },

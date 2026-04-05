@@ -1,5 +1,6 @@
 import { GATEWAY_URL } from "@/lib/env";
 import { getPublicKeyAsync, signAsync, utils as edUtils } from "@noble/ed25519";
+import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import type {
   ConnectionStatus,
   HelloEvent,
@@ -22,6 +23,17 @@ type PendingRequest = {
   reject: (reason: Error | RpcError) => void;
 };
 
+export type ServiceCheckResult = {
+  connected: boolean;
+  error: string | null;
+  checkedAt: number;
+};
+
+export type GatewayServiceStatusSnapshot = {
+  openclaw: ServiceCheckResult | null;
+  zalo: ServiceCheckResult | null;
+};
+
 function isObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
@@ -40,6 +52,9 @@ export class GatewayClient {
   private readonly pending = new Map<string, PendingRequest>();
   private readonly statusListeners = new Set<StatusListener>();
 
+  private latestOpenclawStatus: ServiceCheckResult | null = null;
+  private latestZaloStatus: ServiceCheckResult | null = null;
+
   private readonly url: string;
 
   constructor(url: string = GATEWAY_URL) {
@@ -52,6 +67,76 @@ export class GatewayClient {
 
   getError(): string | null {
     return this.errorMessage;
+  }
+
+  getServiceStatus(): GatewayServiceStatusSnapshot {
+    return {
+      openclaw: this.latestOpenclawStatus,
+      zalo: this.latestZaloStatus,
+    };
+  }
+
+  async checkOpenclawStatus(timeoutMs: number = 5000): Promise<ServiceCheckResult> {
+    const checkedAt = Date.now();
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      const disconnectedResult = {
+        connected: false,
+        error: "Gateway client is not connected",
+        checkedAt,
+      };
+      this.latestOpenclawStatus = disconnectedResult;
+      return disconnectedResult;
+    }
+
+    try {
+      await this.send("sessions.list", { limit: 1 }, timeoutMs);
+      const connectedResult = { connected: true, error: null, checkedAt };
+      this.latestOpenclawStatus = connectedResult;
+      return connectedResult;
+    } catch (error) {
+      const disconnectedResult = {
+        connected: false,
+        error: error instanceof Error ? error.message : "Failed to check openclaw status",
+        checkedAt,
+      };
+      this.latestOpenclawStatus = disconnectedResult;
+      return disconnectedResult;
+    }
+  }
+
+  async checkZaloStatus(timeoutMs: number = 5000): Promise<ServiceCheckResult> {
+    const checkedAt = Date.now();
+
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      const disconnectedResult = {
+        connected: false,
+        error: "Gateway client is not connected",
+        checkedAt,
+      };
+      this.latestZaloStatus = disconnectedResult;
+      return disconnectedResult;
+    }
+
+    try {
+      const response = await this.send("channels.status", { probe: true }, timeoutMs);
+      const connected = isZaloConnectedFromChannelsStatus(response);
+      const result = {
+        connected,
+        error: connected ? null : "Zalo channel is not connected",
+        checkedAt,
+      };
+      this.latestZaloStatus = result;
+      return result;
+    } catch (error) {
+      const disconnectedResult = {
+        connected: false,
+        error: error instanceof Error ? error.message : "Failed to check zalo status",
+        checkedAt,
+      };
+      this.latestZaloStatus = disconnectedResult;
+      return disconnectedResult;
+    }
   }
 
   connect(): void {
@@ -117,7 +202,8 @@ export class GatewayClient {
 
   send<TResponse extends JsonValue = JsonValue>(
     method: string,
-    params: JsonValue = {}
+    params: JsonValue = {},
+    timeoutMs = 0
   ): Promise<TResponse> {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error("Gateway client is not connected"));
@@ -127,9 +213,28 @@ export class GatewayClient {
     const request = { type: "req", id, method, params };
 
     return new Promise<TResponse>((resolve, reject) => {
+      let timeoutId: ReturnType<typeof setTimeout> | null = null;
+
+      if (timeoutMs > 0) {
+        timeoutId = setTimeout(() => {
+          this.pending.delete(id);
+          reject(new Error(`Gateway request timed out after ${timeoutMs}ms`));
+        }, timeoutMs);
+      }
+
       this.pending.set(id, {
-        resolve: (value) => resolve(value as TResponse),
-        reject,
+        resolve: (value) => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          resolve(value as TResponse);
+        },
+        reject: (reason) => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+          reject(reason);
+        },
       });
 
       try {
