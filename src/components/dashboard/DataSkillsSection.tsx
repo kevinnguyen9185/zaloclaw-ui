@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Zap } from "lucide-react";
+import { Package, ShieldCheck, Zap } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { useGateway } from "@/lib/gateway/context";
@@ -67,6 +67,25 @@ function parseSkillsStatusResponse(value: unknown): SkillEntry[] {
         })),
     }))
     .filter((s) => !s.disabled && s.eligible);
+}
+
+function SkillStatusDot({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <span
+      className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground"
+      title={label}
+      aria-label={label}
+    >
+      {children}
+      <span className="sr-only">{label}</span>
+    </span>
+  );
 }
 
 export function DataSkillsSection() {
@@ -152,10 +171,10 @@ export function DataSkillsSection() {
                 }
               }}
             >
-              <CardContent className="flex flex-col gap-1.5 p-2.5">
+              <CardContent className="flex flex-col gap-1 p-2">
                 <div className="flex items-start gap-2">
                   <div className="mt-0.5 rounded-md bg-primary/10 p-1 text-primary">
-                    <Zap className="h-3.5 w-3.5" />
+                    <Zap className="h-3 w-3" />
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-xs font-semibold text-foreground">
@@ -165,24 +184,23 @@ export function DataSkillsSection() {
                       {skill.skillKey}
                     </p>
                   </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    {skill.bundled ? (
+                      <SkillStatusDot label={t("dashboard.dataSkills.badge.bundled")}>
+                        <Package className="h-2.5 w-2.5" />
+                      </SkillStatusDot>
+                    ) : null}
+                    {skill.always ? (
+                      <SkillStatusDot label={t("dashboard.dataSkills.badge.always")}>
+                        <ShieldCheck className="h-2.5 w-2.5" />
+                      </SkillStatusDot>
+                    ) : null}
+                  </div>
                 </div>
 
                 <p className="line-clamp-1 text-[11px] text-muted-foreground">
                   {skill.description ?? t("dashboard.dataSkills.detailsNoDescription")}
                 </p>
-
-                <div className="flex flex-wrap gap-1.5">
-                  {skill.bundled ? (
-                    <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      {t("dashboard.dataSkills.badge.bundled")}
-                    </span>
-                  ) : null}
-                  {skill.always ? (
-                    <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
-                      {t("dashboard.dataSkills.badge.always")}
-                    </span>
-                  ) : null}
-                </div>
               </CardContent>
             </Card>
           ))}
