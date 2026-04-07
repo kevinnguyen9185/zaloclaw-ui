@@ -1,20 +1,26 @@
-import { ActiveModelCard } from "@/components/dashboard/ActiveModelCard";
 import { DashboardAgentChatPanel } from "@/components/dashboard/DashboardAgentChatPanel";
+import { DashboardJobsSection } from "@/components/dashboard/DashboardJobsSection";
+import { DashboardOperatorCommandSection } from "@/components/dashboard/DashboardOperatorCommandSection";
 import { DataSkillsSection } from "@/components/dashboard/DataSkillsSection";
 import { UseCaseLaunchpad } from "@/components/dashboard/UseCaseLaunchpad";
-import { ZaloStatusCard } from "@/components/dashboard/ZaloStatusCard";
 
 export default function DashboardPage() {
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[1fr_380px]">
-      {/* Left column: status + configuration + use cases */}
+      {/* Left column: Lean Ops primary sections */}
       <section className="min-w-0 space-y-5">
-        <div className="grid gap-3 sm:grid-cols-2 animate-card-enter">
-          <ActiveModelCard />
-          <ZaloStatusCard />
+        <div id="section-use-cases">
+          <UseCaseLaunchpad />
         </div>
-        <UseCaseLaunchpad />
-        <DataSkillsSection />
+        <div id="section-agent-skills">
+          <DataSkillsSection />
+        </div>
+        <div id="section-running-jobs">
+          <DashboardJobsSection />
+        </div>
+        <div id="section-operator-command">
+          <DashboardOperatorCommandSection />
+        </div>
       </section>
 
       {/* Right column: persistent chat — sticky and viewport-height on large screens */}

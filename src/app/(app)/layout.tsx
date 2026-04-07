@@ -18,10 +18,46 @@ import { useConnectionStatus } from "@/lib/status/context";
 import { useTheme } from "@/lib/theme/context";
 import { cn } from "@/lib/utils";
 
-const NAV_ITEMS = [
-  { href: "/dashboard", labelKey: "dashboard.nav.dashboard" },
+type NavigationItem = {
+  href: string;
+  labelKey: string;
+  submenu?: Array<{
+    id: string;
+    labelKey: string;
+    sectionId: string;
+  }>;
+};
+
+const NAV_ITEMS: NavigationItem[] = [
+  {
+    href: "/dashboard",
+    labelKey: "dashboard.nav.dashboard",
+    submenu: [
+      {
+        id: "nav-use-cases",
+        labelKey: "dashboard.nav.useCases",
+        sectionId: "section-use-cases",
+      },
+      {
+        id: "nav-agent-skills",
+        labelKey: "dashboard.nav.agentSkills",
+        sectionId: "section-agent-skills",
+      },
+      {
+        id: "nav-running-jobs",
+        labelKey: "dashboard.nav.runningJobs",
+        sectionId: "section-running-jobs",
+      },
+      {
+        id: "nav-operator-command",
+        labelKey: "dashboard.nav.operatorCommand",
+        sectionId: "section-operator-command",
+      },
+    ],
+  },
   { href: "/settings", labelKey: "dashboard.nav.settings" },
 ];
+
 
 const PAGE_TITLES: Record<string, { titleKey: string; subKey: string }> = {
   "/dashboard": {
@@ -92,21 +128,44 @@ function DashboardShell({ children }: { children: ReactNode }) {
         </div>
 
         {/* Nav */}
-        <nav className="flex flex-col gap-1 px-3 py-4">
-          {NAV_ITEMS.map(({ href, labelKey }) => {
-            const isActive = pathname === href;
+        <nav className="flex flex-col px-3 py-4">
+          {NAV_ITEMS.map((item) => {
+            const isActive = pathname === item.href;
+            const hasSubmenu = item.submenu && item.submenu.length > 0;
             return (
-              <Link
-                key={href}
-                href={href}
-                className={
-                  isActive
-                    ? "flex items-center rounded-md border-l-2 border-primary bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
-                    : "flex items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                }
-              >
-                {t(labelKey)}
-              </Link>
+              <div key={item.href}>
+                <Link
+                  href={item.href}
+                  className={
+                    isActive
+                      ? "flex items-center rounded-md border-l-2 border-primary bg-primary/10 px-3 py-2 text-sm font-medium text-primary"
+                      : "flex items-center rounded-md px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                  }
+                >
+                  {t(item.labelKey)}
+                </Link>
+
+                {/* Submenu */}
+                {hasSubmenu && isActive && (
+                  <div className="mt-1 flex flex-col gap-0.5 pl-2">
+                    {(item.submenu ?? []).map((sub) => (
+                      <button
+                        key={sub.id}
+                        type="button"
+                        onClick={() => {
+                          const element = document.getElementById(sub.sectionId);
+                          if (element) {
+                            element.scrollIntoView({ behavior: "smooth", block: "start" });
+                          }
+                        }}
+                        className="flex items-center rounded-md px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                      >
+                        {t(sub.labelKey)}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
             );
           })}
         </nav>

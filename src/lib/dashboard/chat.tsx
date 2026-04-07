@@ -11,6 +11,11 @@ import {
 } from "react";
 
 import { type DashboardChatEvent } from "@/lib/dashboard/chat-events";
+import {
+  type DashboardJob,
+  normalizeDashboardJobs,
+  upsertDashboardJob,
+} from "@/lib/dashboard/jobs";
 import { loadAssistantIdentityState } from "@/lib/dashboard/assistant-identity-storage";
 import { useGateway } from "@/lib/gateway/context";
 import type { JsonValue } from "@/lib/gateway/types";
@@ -97,6 +102,7 @@ export type DashboardChatMessage = {
 
 type DashboardChatContextValue = {
   messages: DashboardChatMessage[];
+  jobs: DashboardJob[];
   draft: string;
   setDraft: (value: string) => void;
   isResponding: boolean;
@@ -111,6 +117,15 @@ type DashboardChatContextValue = {
   reopenConfiguration: () => void;
   setLayoutMode: (mode: DashboardLayoutMode) => void;
   sendMessage: (value: string) => Promise<void>;
+  startCommandJob: (command: string) => string;
+  completeCommandJob: (
+    jobId: string,
+    outcome: {
+      status: "done" | "failed";
+      summary: string;
+      runId?: string;
+    }
+  ) => void;
   publishEvent: (event: DashboardChatEvent) => void;
   resetSession: () => void;
 };
@@ -328,6 +343,19 @@ function createWelcomeMessage(id: string, profile: DashboardIdentityProfile): Da
   };
 }
 
+function createJobTitle(source: DashboardJob["source"]): string {
+  return source === "command" ? "Operator command" : "Agent execution";
+}
+
+function summarizeText(value: string, maxLength = 140): string {
+  const trimmed = value.replace(/\s+/g, " ").trim();
+  if (trimmed.length <= maxLength) {
+    return trimmed;
+  }
+
+  return `${trimmed.slice(0, maxLength - 1)}...`;
+}
+
 const DashboardChatContext = createContext<DashboardChatContextValue | null>(null);
 
 export function DashboardChatProvider({ children }: { children: ReactNode }) {
@@ -339,6 +367,7 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
   const [messages, setMessages] = useState<DashboardChatMessage[]>([
     createWelcomeMessage("assistant-welcome", readSavedIdentityProfile()),
   ]);
+  const [jobs, setJobs] = useState<DashboardJob[]>([]);
   const [draft, setDraft] = useState("");
   const [isResponding, setIsResponding] = useState(false);
   const [isMobileOpen, setMobileOpen] = useState(true);
@@ -356,6 +385,61 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
     messageCounterRef.current += 1;
     setMessages((prev) => [...prev, { id, role, content, at }]);
   }, []);
+
+  const startCommandJob = useCallback((command: string) => {
+    const now = Date.now();
+    const id = `command-${now}-${messageCounterRef.current}`;
+
+    setJobs((previous) =>
+      normalizeDashboardJobs([
+        {
+          id,
+          source: "command",
+          title: createJobTitle("command"),
+          status: "running",
+          command,
+          summary: summarizeText(command),
+          startedAt: now,
+          updatedAt: now,
+        },
+        ...previous,
+      ])
+    );
+
+    return id;
+  }, []);
+
+  const completeCommandJob = useCallback(
+    (
+      jobId: string,
+      outcome: {
+        status: "done" | "failed";
+        summary: string;
+        runId?: string;
+      }
+    ) => {
+      const now = Date.now();
+
+      setJobs((previous) => {
+        const existing = previous.find((job) => job.id === jobId);
+        const next = upsertDashboardJob(previous, {
+          id: jobId,
+          source: "command",
+          title: createJobTitle("command"),
+          status: outcome.status,
+          command: existing?.command,
+          runId: outcome.runId,
+          summary: summarizeText(outcome.summary),
+          startedAt: existing?.startedAt ?? now,
+          updatedAt: now,
+          endedAt: now,
+        });
+
+        return normalizeDashboardJobs(next);
+      });
+    },
+    []
+  );
 
   const publishEvent = useCallback((event: DashboardChatEvent) => {
     void event;
@@ -381,6 +465,8 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
 
       setIsResponding(true);
 
+      let activeRunId: string | null = null;
+
       try {
         const accepted = await send("agent", {
           message: normalized,
@@ -393,13 +479,63 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
           throw new Error("Agent accepted response did not include runId.");
         }
 
+        activeRunId = runId;
+        const now = Date.now();
+        setJobs((previous) =>
+          normalizeDashboardJobs(
+            upsertDashboardJob(previous, {
+              id: `agent-${runId}`,
+              source: "agent",
+              title: createJobTitle("agent"),
+              runId,
+              status: "running",
+              summary: summarizeText(normalized),
+              startedAt: now,
+              updatedAt: now,
+            })
+          )
+        );
+
         const streamedReply = await waitForFinalAgentReply(runId, subscribe, 120000);
         if (streamedReply) {
           appendMessage("assistant", sanitizeAssistantReply(streamedReply));
+          const now = Date.now();
+          setJobs((previous) =>
+            normalizeDashboardJobs(
+              upsertDashboardJob(previous, {
+                id: `agent-${runId}`,
+                source: "agent",
+                title: createJobTitle("agent"),
+                runId,
+                status: "done",
+                summary: summarizeText(streamedReply),
+                startedAt: previous.find((job) => job.id === `agent-${runId}`)?.startedAt ?? now,
+                updatedAt: now,
+                endedAt: now,
+              })
+            )
+          );
         } else {
           appendMessage(
             "assistant",
             `${identityProfile.assistantName}: Agent finished, but did not return a readable text response.`
+          );
+
+          const now = Date.now();
+          setJobs((previous) =>
+            normalizeDashboardJobs(
+              upsertDashboardJob(previous, {
+                id: `agent-${runId}`,
+                source: "agent",
+                title: createJobTitle("agent"),
+                runId,
+                status: "failed",
+                summary: "Agent finished without readable response",
+                startedAt: previous.find((job) => job.id === `agent-${runId}`)?.startedAt ?? now,
+                updatedAt: now,
+                endedAt: now,
+              })
+            )
           );
         }
       } catch (error) {
@@ -410,6 +546,26 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
         appendMessage(
           "assistant",
           `${identityProfile.assistantName}: I could not get agent response yet (${message}).`
+        );
+
+        const now = Date.now();
+        const fallbackId = activeRunId
+          ? `agent-${activeRunId}`
+          : `agent-error-${now}-${messageCounterRef.current}`;
+        setJobs((previous) =>
+          normalizeDashboardJobs(
+            upsertDashboardJob(previous, {
+              id: fallbackId,
+              source: "agent",
+              title: createJobTitle("agent"),
+              runId: activeRunId ?? undefined,
+              status: "failed",
+              summary: summarizeText(message),
+              startedAt: previous.find((job) => job.id === fallbackId)?.startedAt ?? now,
+              updatedAt: now,
+              endedAt: now,
+            })
+          )
         );
       } finally {
         setIsResponding(false);
@@ -454,6 +610,7 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
     setMessages([createWelcomeMessage("assistant-welcome-reset", identityProfile)]);
     setDraft("");
     setIsResponding(false);
+    setJobs([]);
     setMobileOpen(true);
     setLayoutState(INITIAL_DASHBOARD_LAYOUT_STATE);
     messageCounterRef.current = 0;
@@ -481,6 +638,7 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
   const value = useMemo<DashboardChatContextValue>(
     () => ({
       messages,
+      jobs,
       draft,
       setDraft,
       isResponding,
@@ -495,11 +653,14 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
       reopenConfiguration,
       setLayoutMode,
       sendMessage,
+      startCommandJob,
+      completeCommandJob,
       publishEvent,
       resetSession,
     }),
     [
       messages,
+      jobs,
       draft,
       isResponding,
       isMobileOpen,
@@ -511,6 +672,8 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
       reopenConfiguration,
       setLayoutMode,
       sendMessage,
+      startCommandJob,
+      completeCommandJob,
       publishEvent,
       resetSession,
     ]

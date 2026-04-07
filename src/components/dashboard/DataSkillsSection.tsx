@@ -1,63 +1,81 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
-import { HardDrive, FileText, Search } from "lucide-react";
+import { Zap } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  createGatewayConfigService,
-  type ConfigPatchOperation,
-} from "@/lib/gateway/config";
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
 
-const SKILL_IDS = ["google-drive", "google-docs", "file-qa"] as const;
-type SkillId = (typeof SKILL_IDS)[number];
-type SkillState = Record<SkillId, boolean>;
+type SkillEntry = {
+  name: string;
+  skillKey: string;
+  description: string | null;
+  disabled: boolean;
+  always: boolean;
+  eligible: boolean;
+  bundled: boolean;
+  metadata: Array<{ key: string; value: string }>;
+};
 
-function readSkillsFromEntries(entries: Record<string, unknown>): SkillState {
-  const entry = (id: string) =>
-    !!(
-      (entries[id] as Record<string, unknown> | undefined)?.enabled === true
-    );
-  return {
-    "google-drive": entry("google-drive"),
-    "google-docs": entry("google-docs"),
-    "file-qa": entry("file-qa"),
-  };
+const HIDDEN_METADATA_KEYS = new Set([
+  "name",
+  "skillKey",
+  "description",
+  "disabled",
+  "always",
+  "eligible",
+  "bundled",
+]);
+
+function formatMetadataValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value === null) return "null";
+
+  try {
+    return JSON.stringify(value);
+  } catch {
+    return String(value);
+  }
 }
 
-const SKILL_ICONS: Record<SkillId, React.ComponentType<{ className?: string }>> = {
-  "google-drive": HardDrive,
-  "google-docs": FileText,
-  "file-qa": Search,
-};
-
-const SKILL_TITLE_KEYS: Record<SkillId, string> = {
-  "google-drive": "dashboard.dataSkills.googleDrive.name",
-  "google-docs": "dashboard.dataSkills.googleDocs.name",
-  "file-qa": "dashboard.dataSkills.fileQa.name",
-};
-
-const SKILL_DESCRIPTION_KEYS: Record<SkillId, string> = {
-  "google-drive": "dashboard.dataSkills.googleDrive.description",
-  "google-docs": "dashboard.dataSkills.googleDocs.description",
-  "file-qa": "dashboard.dataSkills.fileQa.description",
-};
+function parseSkillsStatusResponse(value: unknown): SkillEntry[] {
+  if (typeof value !== "object" || value === null) return [];
+  const obj = value as Record<string, unknown>;
+  const skills = obj["skills"];
+  if (!Array.isArray(skills)) return [];
+  return skills
+    .filter((s): s is Record<string, unknown> => typeof s === "object" && s !== null)
+    .map((s) => ({
+      name: typeof s["name"] === "string" ? s["name"] : String(s["skillKey"] ?? ""),
+      skillKey: typeof s["skillKey"] === "string" ? s["skillKey"] : "",
+      description:
+        typeof s["description"] === "string" && s["description"].trim().length > 0
+          ? s["description"]
+          : null,
+      disabled: s["disabled"] === true,
+      always: s["always"] === true,
+      eligible: s["eligible"] === true,
+      bundled: s["bundled"] === true,
+      metadata: Object.entries(s)
+        .filter(([key]) => !HIDDEN_METADATA_KEYS.has(key))
+        .map(([key, rawValue]) => ({
+          key,
+          value: formatMetadataValue(rawValue),
+        })),
+    }))
+    .filter((s) => !s.disabled && s.eligible);
+}
 
 export function DataSkillsSection() {
   const { t } = useLocalization();
   const { status, send } = useGateway();
 
-  const [skills, setSkills] = useState<SkillState>({
-    "google-drive": false,
-    "google-docs": false,
-    "file-qa": false,
-  });
+  const [enabledSkills, setEnabledSkills] = useState<SkillEntry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [savingSkill, setSavingSkill] = useState<SkillId | null>(null);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [selectedSkill, setSelectedSkill] = useState<SkillEntry | null>(null);
 
   useEffect(() => {
     if (status !== "connected") {
@@ -69,16 +87,11 @@ export function DataSkillsSection() {
     const load = async () => {
       setLoadError(null);
       try {
-        const service = createGatewayConfigService(send);
-        const snapshot = await service.load();
-        if (cancelled) {
-          return;
-        }
-        setSkills(readSkillsFromEntries(snapshot.normalized.skills.entries));
+        const response = await send("skills.status");
+        if (cancelled) return;
+        setEnabledSkills(parseSkillsStatusResponse(response));
       } catch {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
         setLoadError(t("dashboard.dataSkills.loadError"));
       }
     };
@@ -90,127 +103,157 @@ export function DataSkillsSection() {
     };
   }, [status, send, t]);
 
-  const handleToggle = async (skillId: SkillId) => {
-    const nextEnabled = !skills[skillId];
-    setSavingSkill(skillId);
-    setSaveError(null);
-
-    try {
-      const service = createGatewayConfigService(send);
-      const operations: ConfigPatchOperation[] = [
-        {
-          op: "set",
-          path: ["skills", "entries", skillId],
-          value: { enabled: nextEnabled },
-        },
-      ];
-      const snapshot = await service.update(operations);
-      setSkills(readSkillsFromEntries(snapshot.normalized.skills.entries));
-    } catch {
-      setSaveError(t("dashboard.dataSkills.saveError"));
-    } finally {
-      setSavingSkill(null);
-    }
-  };
-
-  const hasAnySource = skills["google-drive"] || skills["google-docs"];
+  const isConnected = status === "connected";
 
   return (
-    <section aria-label={t("dashboard.dataSkills.sectionTitle")}>
-      <div className="mb-3">
-        <h2 className="text-base font-semibold text-foreground">
-          {t("dashboard.dataSkills.sectionTitle")}
-        </h2>
-        <p className="text-sm text-muted-foreground">
-          {t("dashboard.dataSkills.sectionSubtitle")}
-        </p>
+    <section aria-label={t("dashboard.dataSkills.sectionTitle")} className="space-y-3">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h2 className="text-base font-semibold text-foreground">
+            {t("dashboard.dataSkills.sectionTitle")}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {t("dashboard.dataSkills.sectionSubtitle")}
+          </p>
+        </div>
+        <Link
+          href="http://localhost:18789/chat?session=main"
+          target="_blank"
+          rel="noreferrer noopener"
+          className="rounded-md border border-border/80 bg-background px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+        >
+          {t("dashboard.dataSkills.openClawSession")}
+        </Link>
       </div>
 
       {loadError ? (
         <p className="mb-3 text-sm text-destructive">{loadError}</p>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-3">
-        {SKILL_IDS.map((skillId) => {
-          const Icon = SKILL_ICONS[skillId];
-          const enabled = skills[skillId];
-          const isSaving = savingSkill === skillId;
-          const showPrerequisite = skillId === "file-qa" && !hasAnySource;
-
-          return (
+      {isConnected && !loadError && enabledSkills.length === 0 ? (
+        <Card className="border-dashed border-border/60">
+          <CardContent className="py-6 text-center text-sm text-muted-foreground">
+            {t("dashboard.dataSkills.empty")}
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid gap-2 sm:grid-cols-3">
+          {enabledSkills.map((skill) => (
             <Card
-              key={skillId}
-              className={`border transition-colors ${
-                enabled
-                  ? "border-primary/40 bg-primary/[0.04]"
-                  : "border-border/80 bg-card/90"
-              }`}
+              key={skill.skillKey}
+              className="cursor-pointer border-primary/35 bg-primary/[0.035] transition-colors hover:bg-primary/[0.06]"
+              role="button"
+              tabIndex={0}
+              onClick={() => setSelectedSkill(skill)}
+              onKeyDown={(event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                  event.preventDefault();
+                  setSelectedSkill(skill);
+                }
+              }}
             >
-              <CardContent className="flex flex-col gap-3 p-4">
-                <div className="flex items-start gap-3">
-                  <div
-                    className={`mt-0.5 rounded-md p-1.5 ${
-                      enabled
-                        ? "bg-primary/10 text-primary"
-                        : "bg-muted text-muted-foreground"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4" />
+              <CardContent className="flex flex-col gap-1.5 p-2.5">
+                <div className="flex items-start gap-2">
+                  <div className="mt-0.5 rounded-md bg-primary/10 p-1 text-primary">
+                    <Zap className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-foreground">
-                        {t(SKILL_TITLE_KEYS[skillId])}
-                      </p>
-                      <span
-                        className={`inline-block h-1.5 w-1.5 rounded-full ${
-                          enabled
-                            ? "bg-green-500"
-                            : "bg-muted-foreground/50"
-                        }`}
-                        aria-hidden="true"
-                      />
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      {enabled
-                        ? t("dashboard.dataSkills.status.configured")
-                        : t("dashboard.dataSkills.status.notConfigured")}
+                    <p className="truncate text-xs font-semibold text-foreground">
+                      {skill.name}
+                    </p>
+                    <p className="truncate font-mono text-[10px] text-muted-foreground">
+                      {skill.skillKey}
                     </p>
                   </div>
                 </div>
 
-                <p className="text-xs text-muted-foreground">
-                  {t(SKILL_DESCRIPTION_KEYS[skillId])}
+                <p className="line-clamp-1 text-[11px] text-muted-foreground">
+                  {skill.description ?? t("dashboard.dataSkills.detailsNoDescription")}
                 </p>
 
-                {showPrerequisite ? (
-                  <p className="text-xs text-amber-600 dark:text-amber-400">
-                    {t("dashboard.dataSkills.fileQa.prerequisiteNote")}
-                  </p>
-                ) : null}
-
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={enabled ? "outline" : "default"}
-                  onClick={() => void handleToggle(skillId)}
-                  disabled={isSaving || status !== "connected"}
-                  className="self-start"
-                >
-                  {isSaving
-                    ? t("dashboard.dataSkills.saving")
-                    : enabled
-                      ? t("dashboard.dataSkills.action.disable")
-                      : t("dashboard.dataSkills.action.enable")}
-                </Button>
+                <div className="flex flex-wrap gap-1.5">
+                  {skill.bundled ? (
+                    <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      {t("dashboard.dataSkills.badge.bundled")}
+                    </span>
+                  ) : null}
+                  {skill.always ? (
+                    <span className="inline-flex items-center rounded-full bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
+                      {t("dashboard.dataSkills.badge.always")}
+                    </span>
+                  ) : null}
+                </div>
               </CardContent>
             </Card>
-          );
-        })}
-      </div>
+          ))}
+        </div>
+      )}
 
-      {saveError ? (
-        <p className="mt-2 text-sm text-destructive">{saveError}</p>
+      {selectedSkill ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("dashboard.dataSkills.detailsTitle")}
+          onClick={() => setSelectedSkill(null)}
+        >
+          <div
+            className="w-full max-w-lg rounded-xl border border-border bg-background shadow-xl"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="flex items-start justify-between border-b border-border px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-foreground">
+                  {selectedSkill.name}
+                </p>
+                <p className="font-mono text-xs text-muted-foreground">
+                  {selectedSkill.skillKey}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedSkill(null)}
+                className="rounded-md border border-border px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted"
+              >
+                {t("dashboard.dataSkills.close")}
+              </button>
+            </div>
+
+            <div className="space-y-4 px-4 py-4">
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("dashboard.dataSkills.detailsDescription")}
+                </p>
+                <p className="text-sm text-foreground">
+                  {selectedSkill.description ?? t("dashboard.dataSkills.detailsNoDescription")}
+                </p>
+              </div>
+
+              <div>
+                <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {t("dashboard.dataSkills.detailsMetadata")}
+                </p>
+                {selectedSkill.metadata.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("dashboard.dataSkills.detailsNoMetadata")}
+                  </p>
+                ) : (
+                  <div className="max-h-56 space-y-2 overflow-auto rounded-md border border-border/80 bg-muted/20 p-2">
+                    {selectedSkill.metadata.map((item) => (
+                      <div
+                        key={`${selectedSkill.skillKey}-${item.key}`}
+                        className="grid grid-cols-[120px,1fr] gap-2 text-xs"
+                      >
+                        <span className="font-mono text-muted-foreground">{item.key}</span>
+                        <span className="break-all text-foreground">{item.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
       ) : null}
     </section>
   );

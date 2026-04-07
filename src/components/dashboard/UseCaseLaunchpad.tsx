@@ -195,6 +195,7 @@ export function UseCaseLaunchpad() {
   };
 
   const showConfigurationForm = !isConfigurationCollapsed;
+  const hasIdentitySummary = hasCompletedAssistantIdentityProfile(profile);
 
   if (isUseCaseCollapsed) {
     return (
@@ -228,6 +229,36 @@ export function UseCaseLaunchpad() {
           {t("dashboard.launchpad.subtitle")}
         </p>
       </header>
+
+      <Card className="border border-border/80 bg-card/90">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-semibold">{t("dashboard.identity.summaryTitle")}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {hasIdentitySummary ? (
+            <div className="grid gap-2 text-sm text-muted-foreground sm:grid-cols-2">
+              <p>
+                <span className="font-medium text-foreground">{t("dashboard.identity.summaryName")}: </span>
+                {profile.assistantName}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">{t("dashboard.identity.summaryType")}: </span>
+                {profile.creatureType}
+              </p>
+              <p className="sm:col-span-2">
+                <span className="font-medium text-foreground">{t("dashboard.identity.summaryVibe")}: </span>
+                {profile.vibe}
+              </p>
+              <p>
+                <span className="font-medium text-foreground">{t("dashboard.identity.summaryTimezone")}: </span>
+                {profile.timezone}
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">{t("dashboard.identity.summaryIncomplete")}</p>
+          )}
+        </CardContent>
+      </Card>
 
       {stage === "intro" ? (
         <Card className="border border-primary/30 bg-primary/[0.06]">
