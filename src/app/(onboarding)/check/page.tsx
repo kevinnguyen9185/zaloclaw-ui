@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Info } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -144,7 +145,20 @@ export default function OnboardingCheckPage() {
 
       <div className="space-y-3 rounded-xl border bg-card/80 p-4">
         <div className="space-y-1">
-          <h3 className="font-heading text-base font-semibold">{t("onboarding.check.tokenTitle")}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="font-heading text-base font-semibold">{t("onboarding.check.tokenTitle")}</h3>
+            <button
+              type="button"
+              className="group relative inline-flex"
+              title={t("onboarding.check.tokenEnvHint")}
+              aria-label={t("onboarding.check.tokenEnvHint")}
+            >
+              <Info className="h-3.5 w-3.5 text-muted-foreground transition-colors group-hover:text-foreground" />
+              <div className="invisible absolute bottom-full left-1/2 z-10 mb-2 w-64 -translate-x-1/2 rounded-md bg-popover px-2 py-1 text-center text-xs text-popover-foreground shadow-md group-hover:visible">
+                {t("onboarding.check.tokenEnvHint")}
+              </div>
+            </button>
+          </div>
           <p className="text-sm text-muted-foreground">
             {needsToken
               ? t("onboarding.check.tokenNeeded")

@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { Package, ShieldCheck, Zap } from "lucide-react";
+import { Package, Settings2, ShieldCheck, Zap } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
+import { GogSkillConfigDialog } from "@/components/dashboard/GogSkillConfigDialog";
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
 
@@ -95,6 +96,7 @@ export function DataSkillsSection() {
   const [enabledSkills, setEnabledSkills] = useState<SkillEntry[]>([]);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedSkill, setSelectedSkill] = useState<SkillEntry | null>(null);
+  const [gogConfigOpen, setGogConfigOpen] = useState(false);
 
   useEffect(() => {
     if (status !== "connected") {
@@ -185,6 +187,23 @@ export function DataSkillsSection() {
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
+                    {skill.skillKey === "gog" ? (
+                      <button
+                        type="button"
+                        className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-muted text-muted-foreground transition-colors hover:bg-muted/80"
+                        title={t("dashboard.gogSetup.title")}
+                        aria-label={t("dashboard.gogSetup.title")}
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setGogConfigOpen(true);
+                        }}
+                        onKeyDown={(event) => {
+                          event.stopPropagation();
+                        }}
+                      >
+                        <Settings2 className="h-2.5 w-2.5" />
+                      </button>
+                    ) : null}
                     {skill.bundled ? (
                       <SkillStatusDot label={t("dashboard.dataSkills.badge.bundled")}>
                         <Package className="h-2.5 w-2.5" />
@@ -273,6 +292,8 @@ export function DataSkillsSection() {
           </div>
         </div>
       ) : null}
+
+      <GogSkillConfigDialog open={gogConfigOpen} onClose={() => setGogConfigOpen(false)} />
     </section>
   );
 }

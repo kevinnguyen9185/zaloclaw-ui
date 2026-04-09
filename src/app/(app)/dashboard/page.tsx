@@ -1,5 +1,5 @@
 import { DashboardAgentChatPanel } from "@/components/dashboard/DashboardAgentChatPanel";
-import { DashboardJobsSection } from "@/components/dashboard/DashboardJobsSection";
+import { DashboardCronJobsSection } from "@/components/dashboard/DashboardCronJobsSection";
 import { DashboardOperatorCommandSection } from "@/components/dashboard/DashboardOperatorCommandSection";
 import { DataSkillsSection } from "@/components/dashboard/DataSkillsSection";
 import { UseCaseLaunchpad } from "@/components/dashboard/UseCaseLaunchpad";
@@ -15,8 +15,8 @@ export default function DashboardPage() {
         <div id="section-agent-skills">
           <DataSkillsSection />
         </div>
-        <div id="section-running-jobs">
-          <DashboardJobsSection />
+        <div id="section-cron-jobs">
+          <DashboardCronJobsSection />
         </div>
         <div id="section-operator-command">
           <DashboardOperatorCommandSection />

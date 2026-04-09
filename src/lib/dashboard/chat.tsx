@@ -100,6 +100,8 @@ export type DashboardChatMessage = {
   at: number;
 };
 
+const WELCOME_MESSAGE_ID_PREFIX = "assistant-welcome";
+
 type DashboardChatContextValue = {
   messages: DashboardChatMessage[];
   jobs: DashboardJob[];
@@ -386,6 +388,25 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
     setMessages((prev) => [...prev, { id, role, content, at }]);
   }, []);
 
+  const syncWelcomeMessage = useCallback((profile: DashboardIdentityProfile) => {
+    setMessages((previous) => {
+      if (previous.length === 0) {
+        return [createWelcomeMessage(`${WELCOME_MESSAGE_ID_PREFIX}-${Date.now()}`, profile)];
+      }
+
+      const [firstMessage, ...rest] = previous;
+      if (
+        firstMessage.role === "assistant" &&
+        firstMessage.id.startsWith(WELCOME_MESSAGE_ID_PREFIX)
+      ) {
+        const nextWelcome = createWelcomeMessage(firstMessage.id, profile);
+        return [nextWelcome, ...rest];
+      }
+
+      return previous;
+    });
+  }, []);
+
   const startCommandJob = useCallback((command: string) => {
     const now = Date.now();
     const id = `command-${now}-${messageCounterRef.current}`;
@@ -576,12 +597,15 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
 
   const setBotName = useCallback((value: string) => {
     const normalized = normalizeBotName(value);
-    setBotNameState(normalized);
-    setIdentityProfile((current) => ({
-      ...current,
+    const nextProfile: DashboardIdentityProfile = {
+      ...identityProfileRef.current,
       assistantName: normalized,
-    }));
-  }, []);
+    };
+
+    setBotNameState(normalized);
+    setIdentityProfile(nextProfile);
+    syncWelcomeMessage(nextProfile);
+  }, [syncWelcomeMessage]);
 
   const updateIdentityProfile = useCallback((profile: Partial<DashboardIdentityProfile>) => {
     const normalized = normalizeIdentityProfile({
@@ -604,7 +628,8 @@ export function DashboardChatProvider({ children }: { children: ReactNode }) {
 
     setIdentityProfile(normalized);
     setBotNameState(normalized.assistantName);
-  }, []);
+    syncWelcomeMessage(normalized);
+  }, [syncWelcomeMessage]);
 
   const resetSession = useCallback(() => {
     setMessages([createWelcomeMessage("assistant-welcome-reset", identityProfile)]);

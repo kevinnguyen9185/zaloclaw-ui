@@ -6,6 +6,17 @@ import type { JsonValue } from "@/lib/gateway/types";
 
 type SendFn = (method: string, params?: JsonValue) => Promise<JsonValue>;
 
+const WAIT_POLL_TIMEOUT_MS = 30000;
+const MAX_WAIT_MS = 180000;
+const RETRYABLE_WAIT_STATUSES = new Set([
+  "accepted",
+  "queued",
+  "running",
+  "in_progress",
+  "pending",
+  "timeout",
+]);
+
 function createIdempotencyKey(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
     return crypto.randomUUID();
@@ -79,15 +90,33 @@ export async function executeAssistantIdentityUpdate(
     throw new Error("Agent accepted response did not include runId.");
   }
 
-  const waitResponse = await send("agent.wait", {
-    runId,
-    timeoutMs: 30000,
-  });
+  const startedAt = Date.now();
+  let lastWaitStatus = "unknown";
 
-  const waitStatus = readWaitStatus(waitResponse);
-  if (waitStatus !== "ok") {
-    throw new Error(`Agent execution did not complete successfully (status: ${waitStatus}).`);
+  while (Date.now() - startedAt < MAX_WAIT_MS) {
+    const elapsed = Date.now() - startedAt;
+    const remaining = MAX_WAIT_MS - elapsed;
+    const timeoutMs = Math.max(1, Math.min(WAIT_POLL_TIMEOUT_MS, remaining));
+
+    const waitResponse = await send("agent.wait", {
+      runId,
+      timeoutMs,
+    });
+
+    const waitStatus = readWaitStatus(waitResponse);
+    if (waitStatus === "ok") {
+      return { runId, waitStatus };
+    }
+
+    lastWaitStatus = waitStatus;
+    if (!RETRYABLE_WAIT_STATUSES.has(waitStatus)) {
+      throw new Error(
+        `Agent execution did not complete successfully (status: ${waitStatus}).`
+      );
+    }
   }
 
-  return { runId, waitStatus };
+  throw new Error(
+    `Agent execution timed out after ${Math.floor(MAX_WAIT_MS / 1000)}s (last status: ${lastWaitStatus}).`
+  );
 }

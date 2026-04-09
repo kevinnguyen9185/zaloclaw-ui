@@ -44,9 +44,9 @@ const NAV_ITEMS: NavigationItem[] = [
         sectionId: "section-agent-skills",
       },
       {
-        id: "nav-running-jobs",
-        labelKey: "dashboard.nav.runningJobs",
-        sectionId: "section-running-jobs",
+        id: "nav-cron-jobs",
+        labelKey: "dashboard.nav.scheduledCronJobs",
+        sectionId: "section-cron-jobs",
       },
       {
         id: "nav-operator-command",

@@ -19,6 +19,7 @@
   "check.tokenTitle": "Token Gateway",
   "check.tokenNeeded": "Cần xác thực. Hãy nhập OpenClaw token và kết nối lại. Thông tin thiết bị sẽ được tạo tự động.",
   "check.tokenExists": "Tuyệt vời, token đã tồn tại cho phiên hiện tại. Thông tin thiết bị vẫn được quản lý tự động.",
+  "check.tokenEnvHint": "Bạn có thể lấy Token Gateway từ biến môi trường OpenClaw OPENCLAW_GATEWAY_TOKEN.",
   "check.tokenPlaceholder": "Dán gateway token",
   "check.showAdvanced": "Hiện cài đặt thiết bị nâng cao",
   "check.hideAdvanced": "Ẩn cài đặt thiết bị nâng cao",
