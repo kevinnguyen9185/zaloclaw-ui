@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { randomUUID } from "node:crypto";
 
-import { getContainerName } from "@/lib/gateway/gog-command";
+import { buildGatewayDockerExecArgs } from "@/lib/gateway/docker-exec";
 
 export type TerminalEvent =
   | { type: "stdout"; chunk: string }
@@ -61,8 +61,7 @@ function finalizeSession(session: ActiveSession, event: TerminalEvent) {
 }
 
 export function startTerminalSession(command: string, tokens: string[]): { sessionId: string } {
-  const containerName = getContainerName();
-  const args = ["exec", "-i", "--user", "node", containerName, ...tokens];
+  const args = buildGatewayDockerExecArgs(tokens);
 
   const child = spawn("docker", args, {
     stdio: ["pipe", "pipe", "pipe"],

@@ -1,13 +1,10 @@
-import { spawn } from "node:child_process";
-
 import { NextResponse } from "next/server";
 
 import {
-  getContainerName,
-  getTimeoutMs,
   parseNonInteractiveGogCommand,
   readCommand,
 } from "@/lib/gateway/gog-command";
+import { runGatewayDockerExec } from "@/lib/gateway/docker-exec";
 
 type GogCommandRequest = {
   command?: unknown;
@@ -24,57 +21,12 @@ type ExecutionResult = {
 
 async function executeGogCommand(command: string): Promise<ExecutionResult> {
   const parsed = parseNonInteractiveGogCommand(command);
-  const containerName = getContainerName();
-  const timeoutMs = getTimeoutMs();
+  const result = await runGatewayDockerExec(parsed.tokens);
 
-  const args = ["exec", "-i", "--user", "node", containerName, ...parsed.tokens];
-
-  return await new Promise<ExecutionResult>((resolve) => {
-    const child = spawn("docker", args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-    }, timeoutMs);
-
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({
-        ok: false,
-        command: parsed.normalizedCommand,
-        exitCode: null,
-        stdout,
-        stderr: `${stderr}${stderr ? "\n" : ""}${error.message}`.trim(),
-        timedOut,
-      });
-    });
-
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({
-        ok: !timedOut && code === 0,
-        command: parsed.normalizedCommand,
-        exitCode: code,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-        timedOut,
-      });
-    });
-  });
+  return {
+    ...result,
+    command: parsed.normalizedCommand,
+  };
 }
 
 export async function POST(request: Request) {

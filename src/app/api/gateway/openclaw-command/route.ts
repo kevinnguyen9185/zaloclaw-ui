@@ -1,6 +1,6 @@
-import { spawn } from "node:child_process";
-
 import { NextResponse } from "next/server";
+
+import { runGatewayDockerExec } from "@/lib/gateway/docker-exec";
 
 type OpenclawCommandRequest = {
   command?: unknown;
@@ -15,8 +15,6 @@ type ExecutionResult = {
   timedOut: boolean;
 };
 
-const DEFAULT_CONTAINER_NAME = "zaloclaw-infra-openclaw-gateway-1";
-const DEFAULT_TIMEOUT_MS = 20_000;
 const MAX_COMMAND_LENGTH = 512;
 const UNSAFE_TOKEN_PATTERN = /[;&|`$<>\n\r]/;
 
@@ -53,82 +51,14 @@ function tokenizeSubcommand(command: string): string[] {
   return parts;
 }
 
-function getContainerName(): string {
-  const configured = process.env.OPENCLAW_GATEWAY_CONTAINER?.trim();
-  return configured && configured.length > 0 ? configured : DEFAULT_CONTAINER_NAME;
-}
-
-function getTimeoutMs(): number {
-  const raw = process.env.OPENCLAW_COMMAND_TIMEOUT_MS?.trim();
-  const parsed = raw ? Number(raw) : NaN;
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-
-  return Math.floor(parsed);
-}
-
 async function executeOpenclawCommand(command: string): Promise<ExecutionResult> {
   const subcommand = tokenizeSubcommand(command);
-  const containerName = getContainerName();
-  const timeoutMs = getTimeoutMs();
+  const result = await runGatewayDockerExec(["openclaw", ...subcommand]);
 
-  const args = [
-    "exec",
-    "-i",
-    "--user",
-    "node",
-    containerName,
-    "openclaw",
-    ...subcommand,
-  ];
-
-  return await new Promise<ExecutionResult>((resolve) => {
-    const child = spawn("docker", args, {
-      stdio: ["ignore", "pipe", "pipe"],
-    });
-
-    let stdout = "";
-    let stderr = "";
-    let timedOut = false;
-
-    child.stdout.on("data", (chunk: Buffer | string) => {
-      stdout += chunk.toString();
-    });
-
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderr += chunk.toString();
-    });
-
-    const timer = setTimeout(() => {
-      timedOut = true;
-      child.kill("SIGTERM");
-    }, timeoutMs);
-
-    child.on("error", (error) => {
-      clearTimeout(timer);
-      resolve({
-        ok: false,
-        command,
-        exitCode: null,
-        stdout,
-        stderr: `${stderr}${stderr ? "\n" : ""}${error.message}`.trim(),
-        timedOut,
-      });
-    });
-
-    child.on("close", (code) => {
-      clearTimeout(timer);
-      resolve({
-        ok: !timedOut && code === 0,
-        command,
-        exitCode: code,
-        stdout: stdout.trim(),
-        stderr: stderr.trim(),
-        timedOut,
-      });
-    });
-  });
+  return {
+    ...result,
+    command,
+  };
 }
 
 export async function POST(request: Request) {

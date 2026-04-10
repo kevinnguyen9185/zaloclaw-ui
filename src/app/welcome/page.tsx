@@ -25,7 +25,7 @@ export default function WelcomePage() {
       {/* Content anchored to bottom */}
       <div className="absolute inset-x-0 bottom-0 flex flex-col items-center gap-6 px-6 pb-16 text-center animate-hero-enter">
         <h1 className="font-heading text-4xl font-semibold text-white sm:text-5xl">
-          ZaloClaw
+          ZClaw - Your AI Data Clawing Companion
         </h1>
         <p className="text-white/70 text-sm tracking-widest uppercase">
           Intelligent Data Clawing · Effortless Connection

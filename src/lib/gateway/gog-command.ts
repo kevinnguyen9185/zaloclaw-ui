@@ -11,9 +11,6 @@ export const FILE_CHECK_COMMAND = [
   `test -f ${GOG_CREDENTIALS_PATH} && echo present || echo missing`,
 ] as const;
 
-export const DEFAULT_CONTAINER_NAME = "zaloclaw-infra-openclaw-gateway-1";
-export const DEFAULT_TIMEOUT_MS = 20_000;
-
 export type ParsedGogCommand = {
   tokens: string[];
   normalizedCommand: string;
@@ -38,21 +35,6 @@ export function readCommand(value: unknown): string {
   }
 
   return value.trim();
-}
-
-export function getContainerName(): string {
-  const configured = process.env.OPENCLAW_GATEWAY_CONTAINER?.trim();
-  return configured && configured.length > 0 ? configured : DEFAULT_CONTAINER_NAME;
-}
-
-export function getTimeoutMs(): number {
-  const raw = process.env.OPENCLAW_COMMAND_TIMEOUT_MS?.trim();
-  const parsed = raw ? Number(raw) : Number.NaN;
-  if (!Number.isFinite(parsed) || parsed <= 0) {
-    return DEFAULT_TIMEOUT_MS;
-  }
-
-  return Math.floor(parsed);
 }
 
 function tokenizeCommand(command: string): string[] {

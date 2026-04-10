@@ -1,0 +1,29 @@
+name: zaloclaw-ui-stack
+
+services:
+  zaloclaw-ui:
+    build:
+      context: .
+      dockerfile: Dockerfile.ui
+    container_name: ${ZALOCLAW_UI_CONTAINER:-zaloclaw-ui}
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-ws://host.docker.internal:18789}
+      OPENCLAW_GATEWAY_CONTAINER: ${OPENCLAW_GATEWAY_CONTAINER:-zaloclaw-infra-openclaw-gateway-1}
+      OPENCLAW_COMMAND_TIMEOUT_MS: ${OPENCLAW_COMMAND_TIMEOUT_MS:-20000}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "docker inspect -f '{{.State.Running}}' \"$${OPENCLAW_GATEWAY_CONTAINER}\" 2>/dev/null | grep -q true",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
