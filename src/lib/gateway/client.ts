@@ -526,22 +526,7 @@ export class GatewayClient {
   }
 
   private readStoredToken(): string {
-    if (typeof window === "undefined") {
-      return "";
-    }
-
-    const envToken = OPENCLAW_GATEWAY_TOKEN.trim();
-    const localToken = window.localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ?? "";
-
-    // Keep localStorage aligned when env token is explicitly configured.
-    if (envToken) {
-      if (localToken !== envToken) {
-        window.localStorage.setItem(TOKEN_STORAGE_KEY, envToken);
-      }
-      return envToken;
-    }
-
-    return localToken;
+    return OPENCLAW_GATEWAY_TOKEN.trim();
   }
 
   private storeToken(token: string): void {

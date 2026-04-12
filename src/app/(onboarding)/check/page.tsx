@@ -12,7 +12,6 @@ import {
   DEVICE_PRIVATE_KEY_STORAGE_KEY,
   DEVICE_PUBLIC_KEY_STORAGE_KEY,
   DEVICE_TOKEN_STORAGE_KEY,
-  TOKEN_STORAGE_KEY,
 } from "@/lib/gateway/client";
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
@@ -33,7 +32,6 @@ export default function OnboardingCheckPage() {
   const [config, setConfig] = useState<ControlUiConfig | null>(null);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
-  const [token, setToken] = useState("");
   const [deviceId, setDeviceId] = useState("");
   const [publicKey, setPublicKey] = useState("");
   const [privateKey, setPrivateKey] = useState("");
@@ -86,14 +84,6 @@ export default function OnboardingCheckPage() {
       return;
     }
 
-    const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ?? "";
-    const initialToken = envToken || stored;
-
-    if (envToken && stored !== envToken) {
-      window.localStorage.setItem(TOKEN_STORAGE_KEY, envToken);
-    }
-
-    setToken(initialToken);
     setDeviceId(window.localStorage.getItem(DEVICE_ID_STORAGE_KEY) ?? "");
     setPublicKey(
       window.localStorage.getItem(DEVICE_PUBLIC_KEY_STORAGE_KEY) ?? ""
@@ -107,7 +97,7 @@ export default function OnboardingCheckPage() {
   }, []);
 
   const canContinue = status === "connected";
-  const effectiveToken = envToken || token;
+  const effectiveToken = envToken;
   const needsToken = !effectiveToken || error?.includes("1008") === true;
 
   return (
@@ -183,14 +173,9 @@ export default function OnboardingCheckPage() {
         <input
           type="password"
           value={effectiveToken}
-          onChange={(event) => {
-            if (envToken) {
-              return;
-            }
-            setToken(event.target.value);
-          }}
+          onChange={() => {}}
           placeholder={t("onboarding.check.tokenPlaceholder")}
-          disabled={Boolean(envToken)}
+          readOnly
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
         />
 
@@ -241,12 +226,10 @@ export default function OnboardingCheckPage() {
                 return;
               }
 
-              const tokenToSave = (envToken || token).trim();
-              if (!tokenToSave) {
+              if (!envToken) {
                 return;
               }
 
-              window.localStorage.setItem(TOKEN_STORAGE_KEY, tokenToSave);
               if (deviceId.trim()) {
                 window.localStorage.setItem(DEVICE_ID_STORAGE_KEY, deviceId.trim());
               }
@@ -281,12 +264,10 @@ export default function OnboardingCheckPage() {
                 return;
               }
 
-              window.localStorage.removeItem(TOKEN_STORAGE_KEY);
               window.localStorage.removeItem(DEVICE_ID_STORAGE_KEY);
               window.localStorage.removeItem(DEVICE_PUBLIC_KEY_STORAGE_KEY);
               window.localStorage.removeItem(DEVICE_PRIVATE_KEY_STORAGE_KEY);
               window.localStorage.removeItem(DEVICE_TOKEN_STORAGE_KEY);
-              setToken("");
               setDeviceId("");
               setPublicKey("");
               setPrivateKey("");
