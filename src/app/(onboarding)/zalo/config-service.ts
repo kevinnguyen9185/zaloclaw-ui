@@ -155,3 +155,45 @@ export async function saveZaloBotToken(
     },
   ]);
 }
+
+export type PairingGuideResult = {
+  message: string;
+  method: string;
+  runId: string;
+  waitStatus: string;
+};
+
+export async function executePairingGuide(
+  send: SendFn,
+  pairingGuide: string
+): Promise<PairingGuideResult> {
+  const trimmed = pairingGuide.trim();
+  if (!trimmed) {
+    throw new Error("Pairing guide message is required.");
+  }
+
+  const message = [
+    "Use this message below to pair Zalo bot account",
+    "",
+    trimmed,
+  ].join("\n");
+
+  const idempotencyKey = `zalo-pair-${Date.now()}`;
+
+  const agentResponse = await send("agent", {
+    idempotencyKey,
+    message,
+    agentId: "main",
+  }) as Record<string, unknown>;
+
+  const runId = typeof agentResponse.runId === "string" ? agentResponse.runId : "";
+
+  const waitResponse = await send("agent.wait", {
+    runId,
+    timeoutMs: 30000,
+  }) as Record<string, unknown>;
+
+  const waitStatus = typeof waitResponse.status === "string" ? waitResponse.status : "";
+
+  return { message, method: "agent", runId, waitStatus };
+}

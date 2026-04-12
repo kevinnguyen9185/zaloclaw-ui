@@ -71,7 +71,19 @@ export function GatewayProvider({ children }: { children: ReactNode }) {
       setError(nextError);
     });
 
-    client.connect();
+    // Fetch the gateway token server-side so the runtime .env value is used
+    // rather than whatever was baked into the JS bundle at build time.
+    fetch("/api/gateway/token")
+      .then((res) => res.json() as Promise<{ token: string }>)
+      .then(({ token }) => {
+        client.setEnvToken(token);
+      })
+      .catch(() => {
+        // proceed without token; handshake will surface the error
+      })
+      .finally(() => {
+        client.connect();
+      });
 
     return () => {
       unsubscribe();

@@ -1,4 +1,4 @@
-import { GATEWAY_URL, OPENCLAW_GATEWAY_TOKEN } from "@/lib/env";
+import { GATEWAY_URL } from "@/lib/env";
 import { getPublicKeyAsync, signAsync, utils as edUtils } from "@noble/ed25519";
 import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import type {
@@ -54,11 +54,16 @@ export class GatewayClient {
 
   private latestOpenclawStatus: ServiceCheckResult | null = null;
   private latestZaloStatus: ServiceCheckResult | null = null;
+  private envToken = "";
 
   private readonly url: string;
 
   constructor(url: string = GATEWAY_URL) {
     this.url = url;
+  }
+
+  setEnvToken(token: string): void {
+    this.envToken = token.trim();
   }
 
   getStatus(): ConnectionStatus {
@@ -526,7 +531,7 @@ export class GatewayClient {
   }
 
   private readStoredToken(): string {
-    return OPENCLAW_GATEWAY_TOKEN.trim();
+    return this.envToken;
   }
 
   private storeToken(token: string): void {

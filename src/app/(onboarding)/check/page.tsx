@@ -16,7 +16,6 @@ import {
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
-import { OPENCLAW_GATEWAY_TOKEN } from "@/lib/env";
 
 type ControlUiConfig = {
   assistantName?: string;
@@ -37,9 +36,17 @@ export default function OnboardingCheckPage() {
   const [privateKey, setPrivateKey] = useState("");
   const [deviceToken, setDeviceToken] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const envToken = OPENCLAW_GATEWAY_TOKEN.trim();
+  const [envToken, setEnvToken] = useState("");
 
   const configUrl = useMemo(() => "/api/gateway/config", []);
+
+  // Fetch the gateway token from the server so the runtime .env value is used.
+  useEffect(() => {
+    fetch("/api/gateway/token")
+      .then((res) => res.json() as Promise<{ token: string }>)
+      .then(({ token }) => setEnvToken(token.trim()))
+      .catch(() => {});
+  }, []);
 
   // Set the current step when the page loads
   useEffect(() => {
