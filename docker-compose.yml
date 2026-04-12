@@ -9,10 +9,11 @@ services:
     restart: unless-stopped
     ports:
       - "3000:3000"
+    env_file:
+      - .env
     environment:
       NEXT_PUBLIC_GATEWAY_URL: ${NEXT_PUBLIC_GATEWAY_URL:-ws://host.docker.internal:18789}
       OPENCLAW_GATEWAY_CONTAINER: ${OPENCLAW_GATEWAY_CONTAINER:-zaloclaw-infra-openclaw-gateway-1}
-      OPENCLAW_COMMAND_TIMEOUT_MS: ${OPENCLAW_COMMAND_TIMEOUT_MS:-20000}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     extra_hosts:
