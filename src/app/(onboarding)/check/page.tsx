@@ -39,6 +39,7 @@ export default function OnboardingCheckPage() {
   const [privateKey, setPrivateKey] = useState("");
   const [deviceToken, setDeviceToken] = useState("");
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const envToken = OPENCLAW_GATEWAY_TOKEN.trim();
 
   const configUrl = useMemo(() => "/api/gateway/config", []);
 
@@ -85,7 +86,6 @@ export default function OnboardingCheckPage() {
       return;
     }
 
-    const envToken = OPENCLAW_GATEWAY_TOKEN.trim();
     const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ?? "";
     const initialToken = envToken || stored;
 
@@ -107,7 +107,8 @@ export default function OnboardingCheckPage() {
   }, []);
 
   const canContinue = status === "connected";
-  const needsToken = !token || error?.includes("1008") === true;
+  const effectiveToken = envToken || token;
+  const needsToken = !effectiveToken || error?.includes("1008") === true;
 
   return (
     <section className="space-y-5">
@@ -181,9 +182,15 @@ export default function OnboardingCheckPage() {
 
         <input
           type="password"
-          value={token}
-          onChange={(event) => setToken(event.target.value)}
+          value={effectiveToken}
+          onChange={(event) => {
+            if (envToken) {
+              return;
+            }
+            setToken(event.target.value);
+          }}
           placeholder={t("onboarding.check.tokenPlaceholder")}
+          disabled={Boolean(envToken)}
           className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40"
         />
 
@@ -234,11 +241,12 @@ export default function OnboardingCheckPage() {
                 return;
               }
 
-              if (!token.trim()) {
+              const tokenToSave = (envToken || token).trim();
+              if (!tokenToSave) {
                 return;
               }
 
-              window.localStorage.setItem(TOKEN_STORAGE_KEY, token.trim());
+              window.localStorage.setItem(TOKEN_STORAGE_KEY, tokenToSave);
               if (deviceId.trim()) {
                 window.localStorage.setItem(DEVICE_ID_STORAGE_KEY, deviceId.trim());
               }
