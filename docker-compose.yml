@@ -16,6 +16,7 @@ services:
       OPENCLAW_GATEWAY_CONTAINER: ${OPENCLAW_GATEWAY_CONTAINER:-zaloclaw-infra-openclaw-gateway-1}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
+      - ./.env:/app/.env:ro
     extra_hosts:
       - "host.docker.internal:host-gateway"
     healthcheck:

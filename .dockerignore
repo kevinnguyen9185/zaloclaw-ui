@@ -8,5 +8,7 @@ yarn-error.log*
 pnpm-debug.log*
 coverage
 .vscode
+.env
 .env.local
+.env.*.local
 *.tsbuildinfo
