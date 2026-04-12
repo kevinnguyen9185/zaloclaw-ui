@@ -19,7 +19,7 @@
   "check.tokenTitle": "Gateway Token",
   "check.tokenNeeded": "Authentication is required. Enter your OpenClaw token and reconnect. Device credentials are generated automatically.",
   "check.tokenExists": "Great, token already exists for this session. Device credentials remain managed automatically.",
-  "check.tokenEnvHint": "You can get this Token Gateway from the OpenClaw environment variable OPENCLAW_GATEWAY_TOKEN.",
+  "check.tokenEnvHint": "You can provide the gateway token via NEXT_PUBLIC_OPENCLAW_GATEWAY_TOKEN.",
   "check.tokenPlaceholder": "Paste gateway token",
   "check.showAdvanced": "Show advanced device settings",
   "check.hideAdvanced": "Hide advanced device settings",

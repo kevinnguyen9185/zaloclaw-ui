@@ -1,4 +1,4 @@
-import { GATEWAY_URL } from "@/lib/env";
+import { GATEWAY_URL, OPENCLAW_GATEWAY_TOKEN } from "@/lib/env";
 import { getPublicKeyAsync, signAsync, utils as edUtils } from "@noble/ed25519";
 import { isZaloConnectedFromChannelsStatus } from "@/lib/gateway/zalo-status";
 import type {
@@ -530,7 +530,18 @@ export class GatewayClient {
       return "";
     }
 
-    return window.localStorage.getItem(TOKEN_STORAGE_KEY) ?? "";
+    const envToken = OPENCLAW_GATEWAY_TOKEN.trim();
+    const localToken = window.localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ?? "";
+
+    // Keep localStorage aligned when env token is explicitly configured.
+    if (envToken) {
+      if (localToken !== envToken) {
+        window.localStorage.setItem(TOKEN_STORAGE_KEY, envToken);
+      }
+      return envToken;
+    }
+
+    return localToken;
   }
 
   private storeToken(token: string): void {
