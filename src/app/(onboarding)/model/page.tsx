@@ -32,6 +32,11 @@ export default function OnboardingModelPage() {
   const [modelError, setModelError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
 
+  // Set the current step when the page loads
+  useEffect(() => {
+    setStep("model");
+  }, [setStep]);
+
   const loadStepState = useCallback(async () => {
     setLoading(true);
     setModelError(null);

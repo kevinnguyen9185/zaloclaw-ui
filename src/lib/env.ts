@@ -2,3 +2,6 @@ const DEFAULT_GATEWAY_URL = "ws://localhost:18789";
 
 export const GATEWAY_URL =
   process.env.NEXT_PUBLIC_GATEWAY_URL ?? DEFAULT_GATEWAY_URL;
+
+export const OPENCLAW_GATEWAY_TOKEN =
+  process.env.NEXT_PUBLIC_OPENCLAW_GATEWAY_TOKEN ?? "";

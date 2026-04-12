@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 
 import { Badge } from "@/components/ui/badge";
@@ -10,8 +11,13 @@ import { useOnboarding } from "@/lib/onboarding/context";
 
 export default function OnboardingCompletePage() {
   const router = useRouter();
-  const { state, setCompleted } = useOnboarding();
+  const { state, setCompleted, setStep } = useOnboarding();
   const { t } = useLocalization();
+
+  // Set the current step when the page loads
+  useEffect(() => {
+    setStep("complete");
+  }, [setStep]);
 
   return (
     <section className="space-y-5">

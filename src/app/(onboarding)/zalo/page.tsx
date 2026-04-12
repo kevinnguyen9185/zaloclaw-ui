@@ -36,6 +36,11 @@ export default function OnboardingZaloPage() {
   const [guideMessageTone, setGuideMessageTone] = useState<"success" | "error" | null>(null);
   const [pairingDone, setPairingDone] = useState(false);
 
+  // Set the current step when the page loads
+  useEffect(() => {
+    setStep("zalo");
+  }, [setStep]);
+
   const checkStatus = useCallback(async () => {
     if (status !== "connected") {
       return;

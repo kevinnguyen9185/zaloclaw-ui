@@ -17,6 +17,7 @@ import {
 import { useGateway } from "@/lib/gateway/context";
 import { useLocalization } from "@/lib/i18n/context";
 import { useOnboarding } from "@/lib/onboarding/context";
+import { OPENCLAW_GATEWAY_TOKEN } from "@/lib/env";
 
 type ControlUiConfig = {
   assistantName?: string;
@@ -40,6 +41,11 @@ export default function OnboardingCheckPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const configUrl = useMemo(() => "/api/gateway/config", []);
+
+  // Set the current step when the page loads
+  useEffect(() => {
+    setStep("check");
+  }, [setStep]);
 
   const fetchConfig = useCallback(async () => {
     setLoading(true);
@@ -80,7 +86,7 @@ export default function OnboardingCheckPage() {
     }
 
     const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY) ?? "";
-    setToken(stored);
+    setToken(OPENCLAW_GATEWAY_TOKEN || stored);
     setDeviceId(window.localStorage.getItem(DEVICE_ID_STORAGE_KEY) ?? "");
     setPublicKey(
       window.localStorage.getItem(DEVICE_PUBLIC_KEY_STORAGE_KEY) ?? ""
