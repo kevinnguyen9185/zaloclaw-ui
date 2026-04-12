@@ -85,8 +85,15 @@ export default function OnboardingCheckPage() {
       return;
     }
 
-    const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY) ?? "";
-    setToken(OPENCLAW_GATEWAY_TOKEN || stored);
+    const envToken = OPENCLAW_GATEWAY_TOKEN.trim();
+    const stored = window.localStorage.getItem(TOKEN_STORAGE_KEY)?.trim() ?? "";
+    const initialToken = envToken || stored;
+
+    if (envToken && stored !== envToken) {
+      window.localStorage.setItem(TOKEN_STORAGE_KEY, envToken);
+    }
+
+    setToken(initialToken);
     setDeviceId(window.localStorage.getItem(DEVICE_ID_STORAGE_KEY) ?? "");
     setPublicKey(
       window.localStorage.getItem(DEVICE_PUBLIC_KEY_STORAGE_KEY) ?? ""
